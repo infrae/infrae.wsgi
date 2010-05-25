@@ -216,7 +216,7 @@ class WSGIResponse(object):
     def debugError(self, name):
         raise zExceptions.NotFound(name)
 
-    def forbidenError(self, name):
+    def forbiddenError(self, name):
         raise zExceptions.Forbidden(name)
 
     def badRequestError(self, name):
