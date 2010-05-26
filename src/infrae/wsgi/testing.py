@@ -5,7 +5,7 @@
 import re
 import base64
 
-from infrae.testing import Zope2Layer, suite_from_package
+from infrae.testing import Zope2Layer, suite_from_package, TestCase
 from infrae.wsgi.publisher import WSGIApplication
 from transaction import commit
 from wsgi_intercept.mechanize_intercept import Browser as BaseInterceptBrowser
@@ -137,10 +137,15 @@ class BrowserLayer(Zope2Layer):
     """Functional test layer.
     """
 
+    def _create_wsgi_application(self):
+        # Create Zope WSGI Application. You can change this method if
+        # you whish to change the tested WSGI application.
+        return WSGIApplication(
+            self._application, self._transaction_manager)
+
     def testSetUp(self):
         super(BrowserLayer, self).testSetUp()
-        wsgi_app = WSGIApplication(
-            self._application, self._transaction_manager)
+        wsgi_app = self._create_wsgi_application()
 
         def factory(handle_errors=True):
             return TestBrowserMiddleware(
