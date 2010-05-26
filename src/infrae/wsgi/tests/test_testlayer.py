@@ -5,7 +5,7 @@
 import unittest
 
 import infrae.wsgi
-from infrae.wsgi.testing import BrowserLayer, Browser
+from infrae.wsgi.testing import BrowserLayer, Browser, http
 
 
 class MockWSGIApplication(object):
@@ -104,8 +104,55 @@ class BrowserTestCase(unittest.TestCase):
         self.assertEqual(environ['HTTP_AUTHORIZATION'], 'Basic bWdyOm1ncnB3')
 
 
+class HTTPTestCase(unittest.TestCase):
+    """Test the test http function.
+    """
+    layer = FunctionalLayer
+
+    def setUp(self):
+        self.wsgi_application = self.layer.test_wsgi_application
+
+    def test_open(self):
+        """Test simple open.
+        """
+        result = http('GET /index.html HTTP/1.0')
+        environ = self.wsgi_application.get_environ()
+
+        self.assertEqual(result, 'HTTP/1.0 200 OK\n\nTest succeed')
+        self.assertEqual(environ['wsgi.handleErrors'], False)
+        self.assertEqual(environ['PATH_INFO'], '/index.html')
+        self.assertEqual(environ['REQUEST_METHOD'], 'GET')
+
+    def test_handle_error(self):
+        """Test the handle error flag.
+        """
+        result = http('POST /index.html HTTP/1.0', handle_errors=True)
+        environ = self.wsgi_application.get_environ()
+
+        self.assertEqual(result, 'HTTP/1.0 200 OK\n\nTest succeed')
+        self.assertEqual(environ['wsgi.handleErrors'], True)
+        self.assertEqual(environ['PATH_INFO'], '/index.html')
+        self.assertEqual(environ['REQUEST_METHOD'], 'POST')
+
+    def test_open_parsed(self):
+        """Test parsing the result.
+        """
+        result = http('GET /index.html HTTP/1.0', parsed=True)
+        environ = self.wsgi_application.get_environ()
+
+        self.assertEqual(result.getStatus(), 200)
+        self.assertEqual(result.getStatusString(), '200 OK')
+        self.assertEqual(result.getBody(), 'Test succeed')
+        self.assertEqual(result.getOutput(), 'HTTP/1.0 200 OK\n\nTest succeed')
+        self.assertEqual(str(result), 'HTTP/1.0 200 OK\n\nTest succeed')
+        self.assertEqual(environ['wsgi.handleErrors'], False)
+        self.assertEqual(environ['PATH_INFO'], '/index.html')
+        self.assertEqual(environ['REQUEST_METHOD'], 'GET')
+
+
 def test_suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(BrowserTestCase))
+    suite.addTest(unittest.makeSuite(HTTPTestCase))
     return suite
 
