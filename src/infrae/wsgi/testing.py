@@ -10,6 +10,7 @@ from infrae.wsgi.publisher import WSGIApplication
 from transaction import commit
 from wsgi_intercept.mechanize_intercept import Browser as BaseInterceptBrowser
 from zope.testbrowser.browser import Browser as ZopeTestBrowser
+from zope.site.hooks import getSite, setSite, setHooks
 import wsgi_intercept
 
 # List of hostname where the test browser/http function replies to
@@ -70,21 +71,27 @@ def is_wanted_header(header):
 
 class TestBrowserWSGIResult(object):
     """Call a WSGI Application and return its result.
+    
+    Backup the ZCA local site before calling the wrapped application and
+    restore it when done.
     """
 
-    def __init__(self, app, finish, environ, start_response):
+    def __init__(self, app, connection, environ, start_response):
         self.app = app
+        self.connection = connection
         self.environ = environ
         self.start_response = start_response
-        self.finish = finish
         self.__result = None
         self.__next = None
+        self.__site = None
 
     def __iter__(self):
         return self
 
     def next(self):
         if self.__next is None:
+            # Backup ZCA site
+            self.__site = getSite()
             self.__result = self.app(self.environ, self.start_response)
             self.__next = iter(self.__result).next
         return self.__next()
@@ -93,7 +100,10 @@ class TestBrowserWSGIResult(object):
         if self.__result is not None:
             if hasattr(self.__result, 'close'):
                 self.__result.close()
-        self.finish()
+        if self.__site is not None:
+            setSite(self.__site)
+            setHooks()
+        self.connection.sync()
 
 
 class TestBrowserMiddleware(object):
@@ -128,9 +138,8 @@ class TestBrowserMiddleware(object):
             return start_response(status, headers)
 
         commit()
-
         return TestBrowserWSGIResult(
-            self.app, self.connection.sync, environ, application_start_response)
+            self.app, self.connection, environ, application_start_response)
 
 
 class BrowserLayer(Zope2Layer):
