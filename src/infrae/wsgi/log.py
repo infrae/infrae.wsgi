@@ -8,7 +8,7 @@ import sys
 import logging
 import collections
 
-logger = logging.getLogger('silva.wsgi')
+logger = logging.getLogger('infrae.wsgi')
 
 
 def object_name(obj):
