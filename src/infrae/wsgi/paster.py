@@ -11,7 +11,7 @@ from Zope2.Startup.run import configure
 from infrae.wsgi.publisher import WSGIApplication
 import Zope2
 
-logger = logging.getLogger('silva.wsgi')
+logger = logging.getLogger('infrae.wsgi')
 
 
 def set_zope_debug_mode(debug_mode):
