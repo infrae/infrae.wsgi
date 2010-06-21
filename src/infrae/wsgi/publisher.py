@@ -113,7 +113,7 @@ class WSGIPublication(object):
         """Commit results of the publication.
 
         """
-        sekf.__safe_callback(notify, PubBeforeCommit(self.request))
+        self.__safe_callback(notify, PubBeforeCommit(self.request))
         self.app.transaction.commit()
         endInteraction()
         self.__safe_callback(notify, PubSuccess(self.request))
