@@ -94,6 +94,12 @@ class WSGIPublication(object):
         self.data_sent = False
         self.publication_done = False
 
+    def __safe_callback(self, func, *args, **kwargs):
+        try:
+            func(*args, **kwargs)
+        except Exception:
+            log_last_error(self.request, self.response)
+
     def start(self):
         """Start the publication process.
         """
@@ -105,19 +111,20 @@ class WSGIPublication(object):
 
     def commit(self):
         """Commit results of the publication.
+
         """
-        notify(PubBeforeCommit(self.request))
+        sekf.__safe_callback(notify, PubBeforeCommit(self.request))
         self.app.transaction.commit()
         endInteraction()
-        notify(PubSuccess(self.request))
+        self.__safe_callback(notify, PubSuccess(self.request))
 
     def abort(self):
         """Abort the current publication process.
         """
-        notify(PubBeforeAbort(self.request, None, False))
+        self.__safe_callback(notify, PubBeforeAbort(self.request, None, False))
         self.app.transaction.abort()
         endInteraction()
-        notify(PubFailure(self.request, None, False))
+        self.__safe_callback(notify, PubFailure(self.request, None, False))
 
     def finish(self):
         """End the publication process, by either committing the
@@ -215,7 +222,7 @@ class WSGIPublication(object):
             # Conflict are managed at an higher level
             raise
         except zExceptions.Unauthorized as error:
-            #log_last_error(self.request, self.response, last_content())
+            log_last_error(self.request, self.response, last_content())
             self.response.setStatus(401)
             self.response._unauthorized()
         except zExceptions.Redirect as error:
