@@ -111,7 +111,6 @@ class WSGIPublication(object):
 
     def commit(self):
         """Commit results of the publication.
-
         """
         self.__safe_callback(notify, PubBeforeCommit(self.request))
         self.app.transaction.commit()
