@@ -7,14 +7,13 @@ import unittest
 from zope.interface import implements
 from zope.publisher.interfaces.http import IResult
 from zope.event import notify
-from zope.component.eventtesting import getEvents, clearEvents
 
 from ZPublisher.Iterators import IStreamIterator
 from ZODB.POSException import ConflictError
 import zExceptions
 
 import infrae.wsgi
-from infrae.testing import ZCMLLayer
+from infrae.testing import ZCMLLayer, get_event_names
 from infrae.wsgi.publisher import WSGIPublication
 from infrae.wsgi.response import WSGIResponse
 from infrae.wsgi.tests.mockers import (
@@ -119,12 +118,6 @@ def streamiterator_view():
 
 def bugous_streamiterator_view():
     return TestStreamIterator(['It\'s the ', 'world.'], 42, fail=True)
-
-
-def get_event_names():
-    called = map(lambda e: e.__class__.__name__, getEvents())
-    clearEvents()
-    return called
 
 
 def consume_wsgi_result(iterator):
