@@ -5,9 +5,12 @@
 import re
 import base64
 
+from AccessControl.SecurityManagement import (
+    getSecurityManager, setSecurityManager)
+from transaction import commit
+
 from infrae.testing import Zope2Layer, suite_from_package, TestCase
 from infrae.wsgi.publisher import WSGIApplication
-from transaction import commit
 from wsgi_intercept.mechanize_intercept import Browser as BaseInterceptBrowser
 from zope.testbrowser.browser import Browser as ZopeTestBrowser
 from zope.site.hooks import getSite, setSite, setHooks
@@ -71,7 +74,7 @@ def is_wanted_header(header):
 
 class TestBrowserWSGIResult(object):
     """Call a WSGI Application and return its result.
-    
+
     Backup the ZCA local site before calling the wrapped application and
     restore it when done.
     """
@@ -84,14 +87,16 @@ class TestBrowserWSGIResult(object):
         self.__result = None
         self.__next = None
         self.__site = None
+        self.__security = None
 
     def __iter__(self):
         return self
 
     def next(self):
         if self.__next is None:
-            # Backup ZCA site
+            # Backup ZCA site and security manager
             self.__site = getSite()
+            self.__security = getSecurityManager()
             self.__result = self.app(self.environ, self.start_response)
             self.__next = iter(self.__result).next
         return self.__next()
@@ -103,6 +108,8 @@ class TestBrowserWSGIResult(object):
         if self.__site is not None:
             setSite(self.__site)
             setHooks()
+        if self.__security is not None:
+            setSecurityManager(self.__security)
         self.connection.sync()
 
 
