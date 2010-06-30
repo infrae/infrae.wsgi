@@ -13,18 +13,20 @@ from ZPublisher.mapply import mapply
 from ZPublisher.pubevents import PubStart, PubSuccess, PubFailure, \
     PubBeforeCommit, PubAfterTraversal, PubBeforeAbort
 from ZODB.POSException import ConflictError
+from zope.component import queryMultiAdapter
 from zope.event import notify
-from zope.interface import providedBy, implements
+from zope.interface import implements
 from zope.publisher.interfaces.browser import IDefaultBrowserLayer
 from zope.security.management import newInteraction, endInteraction
 import Zope2
 import zExceptions
 
+from infrae.wsgi.errors import DefaultError
 from infrae.wsgi.response import WSGIResponse, AbortPublication
 from infrae.wsgi.log import logger, log_last_error
-from silva.core.layout.utils import queryMultiAdapterWithInterface
 
 CHUNK_SIZE = 1<<16              # 64K
+
 
 
 def call_object(obj, args, request):
@@ -153,13 +155,11 @@ class WSGIPublication(object):
     def error(self, error, last_known_obj):
         """Render and log an error.
         """
-        error_page = queryMultiAdapterWithInterface(
-            (providedBy(error), self.request,),
-            last_known_obj,
-            name='error.html')
+        context = DefaultError(error).__of__(last_known_obj)
+        error_page = queryMultiAdapter(
+            (context, self.request), name='error.html')
 
         if error_page is not None:
-            error_page.error = error
             try:
                 error_result = error_page()
                 if error_result is not None:
@@ -182,10 +182,7 @@ class WSGIPublication(object):
         published_content = None
 
         def last_content():
-            content = published_content
-            if content is None:
-                return parents[0] if parents is not None else None
-            return content
+            return parents[0] if parents is not None else None
 
         try:
             self.start()

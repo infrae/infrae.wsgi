@@ -2,11 +2,13 @@
 # See also LICENSE.txt
 # $Id$
 
-
 from five import grok
+from zope.interface import providedBy
 from zope.publisher.interfaces import INotFound
 from zope.publisher.interfaces.browser import IBrowserRequest
 from zope.security.interfaces import IForbidden
+
+import Acquisition
 
 grok.layer(IBrowserRequest)
 
@@ -22,6 +24,20 @@ HTML_TEMPLATE = u"""
 </html>
 """
 
+class DefaultError(Acquisition.Implicit):
+    """Wrapper for errors. The are the context, with all acquisition
+    and Zope Component Architecture working.
+    """
+
+    def __init__(self, error):
+        self.error = error
+
+    @property
+    def __provides__(self):
+        if hasattr(self.error, '__provides__'):
+            return self.error.__provides__
+        return providedBy(self.error)
+
 
 class NotFound(grok.View):
     grok.name('error.html')
@@ -32,7 +48,8 @@ class NotFound(grok.View):
 
     def render(self):
         return HTML_TEMPLATE % (
-            self.__class__.__name__, 'Page not found: %s' % str(self.error))
+            self.__class__.__name__, 'Page not found: %s' %
+            str(self.context.error))
 
 
 class Forbidden(grok.View):
@@ -43,7 +60,8 @@ class Forbidden(grok.View):
         self.response.setStatus(403)
 
     def render(self):
-        return HTML_TEMPLATE % (self.__class__.__name__, str(self.error))
+        return HTML_TEMPLATE % (
+            self.__class__.__name__, str(self.context.error))
 
 
 class Error(grok.View):
@@ -54,4 +72,5 @@ class Error(grok.View):
         self.response.setStatus(500)
 
     def render(self):
-        return HTML_TEMPLATE % (self.error.__class__.__name__, str(self.error))
+        return HTML_TEMPLATE % (
+            self.context.error.__class__.__name__, str(self.context.error))

@@ -8,8 +8,9 @@ from zope.interface import implements
 from zope.publisher.interfaces.http import IResult
 from zope.event import notify
 
-from ZPublisher.Iterators import IStreamIterator
 from ZODB.POSException import ConflictError
+from ZPublisher.Iterators import IStreamIterator
+import ExtensionClass
 import zExceptions
 
 import infrae.wsgi
@@ -140,7 +141,7 @@ class PublisherTestCase(unittest.TestCase):
     def setUp(self):
         class WSGIApplication(object):
             transaction = MockTransactionManager()
-            application = object()
+            application = ExtensionClass.Base()
             response = MockWSGIStartResponse()
 
         self.app = WSGIApplication()
@@ -435,9 +436,9 @@ class PublisherTestCase(unittest.TestCase):
         self.assertEqual(
             self.app.response.status, '500 Internal Server Error')
         self.assertEqual(
-            self.app.response.headers,
-            [('Content-Length', '150'),
-             ('Content-Type', 'text/html;charset=utf-8')])
+           self.app.response.headers,
+           [('Content-Length', '150'),
+            ('Content-Type', 'text/html;charset=utf-8')])
         self.assertEqual(
             get_event_names(),
             ['PubStart', 'PubAfterTraversal', 'PubBeforeAbort', 'PubFailure'])

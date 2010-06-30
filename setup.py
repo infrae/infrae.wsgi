@@ -10,7 +10,7 @@ version = '1.0dev'
 tests_require = [
     'infrae.testing',
     'wsgi_intercept',
-    'zope.component',
+    'zope.site',
     'zope.testbrowser',
     ]
 
@@ -45,6 +45,8 @@ setup(name='infrae.wsgi',
         'zope.interface',
         'zope.publisher',
         'zope.security',
+        'zope.component',
+        'zope.processlifetime',
         ],
       entry_points={
         'paste.app_factory': [
