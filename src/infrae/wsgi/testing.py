@@ -225,10 +225,13 @@ class ResponseParser(object):
     __str__ = getOutput
 
 
-def http(string, handle_errors=False, parsed=False):
+def http(string, handle_errors=False, headers={}, parsed=False):
     """This function behave like the HTTPCaller of
     zope.app.testing.functional.
     """
+    for key, value in headers.items():
+        string += '\r\n%s: %s' % (key, value)
+
     key = ('localhost', 80)
 
     if key not in wsgi_intercept._wsgi_intercept:
