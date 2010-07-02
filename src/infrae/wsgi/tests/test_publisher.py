@@ -10,7 +10,6 @@ from zope.event import notify
 
 from ZODB.POSException import ConflictError
 from ZPublisher.Iterators import IStreamIterator
-import ExtensionClass
 import zExceptions
 
 import infrae.wsgi
@@ -18,7 +17,7 @@ from infrae.testing import ZCMLLayer, get_event_names
 from infrae.wsgi.publisher import WSGIPublication
 from infrae.wsgi.response import WSGIResponse
 from infrae.wsgi.tests.mockers import (
-    MockWSGIStartResponse, MockTransactionManager, MockRequest)
+    MockWSGIStartResponse, MockTransactionManager, MockRequest, MockApplication)
 
 
 # Some test views
@@ -141,7 +140,7 @@ class PublisherTestCase(unittest.TestCase):
     def setUp(self):
         class WSGIApplication(object):
             transaction = MockTransactionManager()
-            application = ExtensionClass.Base()
+            application = MockApplication()
             response = MockWSGIStartResponse()
 
         self.app = WSGIApplication()

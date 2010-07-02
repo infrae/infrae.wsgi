@@ -5,6 +5,7 @@
 from zope.publisher.interfaces.browser import IBrowserRequest
 from zope.interface import implements
 from ZODB.POSException import ConflictError
+import ExtensionClass
 
 
 class MockWSGIStartResponse(object):
@@ -79,6 +80,17 @@ class MockTransactionManager(Mocker):
         self.mocker_call('commit', (), {})
         if self.__conflict:
             raise ConflictError()
+
+
+class MockApplication(ExtensionClass.Base):
+    """Mockup Application.
+    """
+
+    def getPhysicalPath(self):
+        return ('',)
+
+    def __bobo_traverse__(self, REQUEST=None):
+        return self
 
 
 class MockRequest(Mocker):

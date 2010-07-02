@@ -203,15 +203,26 @@ class WSGIPublication(object):
                     if cancel:
                         raise zExceptions.Redirect(cancel)
 
-            # Get the path list.
-            self.request['PARENTS'] = parents = [self.app.application,]
+            # Get the application / virtual root story running
+            root = self.app.application.__bobo_traverse__(REQUEST=self.request)
 
+            if 'HTTP_X_VHM_ROOT' in self.request.environ:
+                path = self.request.environ['HTTP_X_VHM_ROOT']
+                for part in path.split('/'):
+                    if part:
+                        root = root.unrestrictedTraverse(part)
+
+            self.request['PARENTS'] = [root,]
+
+            # Get the virtual host story running
             # This should be in request __init__ but it needs
-            # self.request['PARENTS'] set properly.
-            if 'HTTP_X_VHM_HOST' in self.request.environ.keys():
+            # self.request['PARENTS'] to be set properly.
+            if 'HTTP_X_VHM_HOST' in self.request.environ:
                 set_virtual_host(
                     self.request,
                     self.request.environ['HTTP_X_VHM_HOST'])
+
+            # Get the path list.
             path = self.request.get('PATH_INFO')
 
             # Get object to publish/render
