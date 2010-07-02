@@ -89,9 +89,6 @@ class MockApplication(ExtensionClass.Base):
     def getPhysicalPath(self):
         return ('',)
 
-    def __bobo_traverse__(self, REQUEST=None):
-        return self
-
 
 class MockRequest(Mocker):
     implements(IBrowserRequest)
@@ -101,6 +98,7 @@ class MockRequest(Mocker):
         self.response = response
         self.args = args
         self.environ = {}
+        self.other = {}
         self.__data = data
         self.__view = view
         self.__tries = retry
