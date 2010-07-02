@@ -209,7 +209,8 @@ class WSGIPublication(object):
                         raise zExceptions.Redirect(cancel)
 
             path = self.request.get('PATH_INFO')
-            self.request['PARENTS'] = parents = [self.app.application,]
+            self.request['PARENTS'] = parents = [
+                self.app.application.__bobo_traverse__(request),]
 
             # Get the virtual host story running
             # This should be in request __init__ but it needs
