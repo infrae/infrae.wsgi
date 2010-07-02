@@ -211,7 +211,7 @@ class WSGIPublication(object):
                 for part in path.split('/'):
                     if part:
                         root = root.unrestrictedTraverse([part,])
-
+            logger.info('Root %s' % root)
             self.request['PARENTS'] = [root,]
 
             # Get the virtual host story running
