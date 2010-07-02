@@ -20,8 +20,11 @@ def object_name(obj):
 
 
 def object_path(obj):
-    if hasattr(obj, 'getPhysicalPath'):
-        return '/'.join(obj.getPhysicalPath())
+    try:
+        if hasattr(obj, 'getPhysicalPath'):
+            return '/'.join(obj.getPhysicalPath())
+    except:
+        pass
     return 'n/a'
 
 
