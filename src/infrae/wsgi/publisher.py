@@ -23,7 +23,7 @@ import zExceptions
 
 from infrae.wsgi.errors import DefaultError
 from infrae.wsgi.response import WSGIResponse, AbortPublication
-from infrae.wsgi.log import logger, log_last_error
+from infrae.wsgi.log import logger, log_last_error, ErrorSupplement
 
 CHUNK_SIZE = 1<<16              # 64K
 
@@ -202,6 +202,7 @@ class WSGIPublication(object):
             # Get object to publish/render
             published_content = self.request.traverse(
                 path, validated_hook=Zope2.zpublisher_validated_hook)
+            __traceback_supplement__ = (ErrorSupplement, published_content)
 
             notify(PubAfterTraversal(self.request))
 

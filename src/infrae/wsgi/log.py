@@ -2,13 +2,51 @@
 # See also LICENSE.txt
 # $Id$
 
+from Acquisition import aq_base
 from zExceptions.ExceptionFormatter import format_exception
+from zope.browser.interfaces import IView
 
+from cgi import escape
 import sys
 import logging
 import collections
 
 logger = logging.getLogger('infrae.wsgi')
+
+
+class ErrorSupplement(object):
+    """Add more information about an error on a view in a traceback.
+    """
+
+    def __init__(self, cls, request=None):
+        if IView.providedBy(cls):
+            self.context = cls.context
+            self.request = cls.request
+        else:
+            self.context = cls
+            self.request = request
+        self.cls = cls
+
+    def getInfo(self, as_html=0):
+        object_path = u'n/a'
+        if hasattr(aq_base(self.context), 'getPhysicalPath'):
+            object_path = '/'.join(self.context.getPhysicalPath())
+        info = list()
+        info.append(
+            (u'Class', '%s.%s' % (
+                    self.cls.__module__, self.cls.__class__.__name__)))
+        info.append(
+            (u'Object path', object_path,))
+        info.append(
+            (u'Object type', getattr(self.context, 'meta_type', u'n/a',)))
+        if not as_html:
+            return '   - ' + '\n   - '.join(map(lambda x: '%s: %s' % x, info))
+
+        return u'<p>Extra information:<br /><li>%s</li></p>' % ''.join(map(
+                lambda x: u'<li><b>%s</b>: %s</li>' % (
+                    escape(str(x[0])), escape(str(x[1]))),
+                info))
+
 
 
 def object_name(obj):
