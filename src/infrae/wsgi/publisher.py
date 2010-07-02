@@ -9,6 +9,7 @@ import socket
 import types
 
 from AccessControl.SecurityManagement import noSecurityManager
+from Acquisition.interfaces import IAcquirer
 from ZPublisher.Publish import Retry
 from ZPublisher.Request import Request
 from ZPublisher.mapply import mapply
@@ -166,10 +167,8 @@ class WSGIPublication(object):
         """Render and log an error.
         """
         context = DefaultError(error)
-        try:
+        if IAcquirer.providedBy(last_known_obj):
             context = context.__of__(last_known_obj)
-        except:
-            pass
         error_page = queryMultiAdapter(
             (context, self.request), name='error.html')
 
