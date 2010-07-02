@@ -6,6 +6,7 @@ from urlparse import urlparse
 from tempfile import TemporaryFile
 from cStringIO import StringIO
 import socket
+import types
 
 from AccessControl.SecurityManagement import noSecurityManager
 from ZPublisher.Publish import Retry
@@ -192,7 +193,7 @@ class WSGIPublication(object):
 
         def last_content():
             content = published_content
-            if content is None:
+            if content is None or isinstance(content, types.FunctionType):
                 return parents[0] if parents is not None else None
             return content
 
@@ -207,14 +208,6 @@ class WSGIPublication(object):
                     if cancel:
                         raise zExceptions.Redirect(cancel)
 
-            ### Hack your virtual host. I am ashamed of this piece of code.
-
-            root_path = ('',)
-            if 'HTTP_X_VHM_ROOT' in self.request.environ:
-                path = self.request.environ['HTTP_X_VHM_ROOT'] + path
-                root_path = self.request.environ['HTTP_X_VHM_ROOT'].split('/')
-                self.request['PATH_INFO'] = path
-
             path = self.request.get('PATH_INFO')
             self.request['PARENTS'] = parents = [self.app.application,]
 
@@ -225,8 +218,6 @@ class WSGIPublication(object):
                 set_virtual_host(
                     self.request,
                     self.request.environ['HTTP_X_VHM_HOST'])
-            self.request.other['VirtualRootPhysicalPath'] = root_path
-            ### End of Hack your virtual host
 
             # Get object to publish/render
             published_content = self.request.traverse(
