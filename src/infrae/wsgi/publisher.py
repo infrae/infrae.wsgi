@@ -187,7 +187,7 @@ class WSGIPublication(object):
     def publish(self):
         """Publish the request into the response.
         """
-
+        self.request['PARENTS'] = []
         def last_content():
             parents = self.request['PARENTS']
             return parents[0] if parents else None
@@ -203,16 +203,16 @@ class WSGIPublication(object):
                     if cancel:
                         raise zExceptions.Redirect(cancel)
 
-            # Get the application / virtual root story running
-            root = self.app.application.__bobo_traverse__(REQUEST=self.request)
+            ### Hack your virtual host. I am ashamed of this piece of code.
+            path = self.request.get('PATH_INFO')
 
+            root_path = ('',)
             if 'HTTP_X_VHM_ROOT' in self.request.environ:
-                path = self.request.environ['HTTP_X_VHM_ROOT']
-                for part in path.split('/'):
-                    if part:
-                        root = root.unrestrictedTraverse([part,])
-            logger.info('Root %s' % root)
-            self.request['PARENTS'] = [root,]
+                path = self.request.environ['HTTP_X_VHM_ROOT'] + path
+                root_path = self.request.environ['HTTP_X_VHM_ROOT'].split('/')
+                self.request['PATH_INFO'] = path
+
+            self.request['PARENTS'] = [self.app.application,]
 
             # Get the virtual host story running
             # This should be in request __init__ but it needs
@@ -221,9 +221,8 @@ class WSGIPublication(object):
                 set_virtual_host(
                     self.request,
                     self.request.environ['HTTP_X_VHM_HOST'])
-
-            # Get the path list.
-            path = self.request.get('PATH_INFO')
+            self.request.other['VirtualRootPhysicalPath'] = root_path
+            ### End of Hack your virtual host
 
             # Get object to publish/render
             published_content = self.request.traverse(
