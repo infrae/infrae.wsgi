@@ -248,8 +248,6 @@ def http(string, handle_errors=False, headers={}, parsed=False,
     if body:
         string += "\r\n" + body
 
-    print string
-
     key = ('localhost', 80)
 
     if key not in wsgi_intercept._wsgi_intercept:
