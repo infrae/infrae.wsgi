@@ -187,9 +187,9 @@ class WSGIPublication(object):
     def publish(self):
         """Publish the request into the response.
         """
-        self.request['PARENTS'] = []
+        parents = None
+
         def last_content():
-            parents = self.request['PARENTS']
             return parents[0] if parents else None
 
         try:
@@ -212,7 +212,7 @@ class WSGIPublication(object):
                 self.request['PATH_INFO'] = path
 
             path = self.request.get('PATH_INFO')
-            self.request['PARENTS'] = [self.app.application,]
+            self.request['PARENTS'] = parents = [self.app.application,]
 
             # Get the virtual host story running
             # This should be in request __init__ but it needs
