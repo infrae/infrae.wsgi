@@ -224,13 +224,31 @@ class ResponseParser(object):
 
     __str__ = getOutput
 
+import urllib
 
-def http(string, handle_errors=False, headers={}, parsed=False):
+def http(string, handle_errors=False, headers={}, parsed=False,
+         data={}, auth=""):
     """This function behave like the HTTPCaller of
     zope.app.testing.functional.
     """
+    string += "\r\n"
+    body = ""
+    if auth:
+        headers['Authorization'] = \
+            'Basic %s' % ("%s:%s" % (auth, auth,)).encode('base64')
+
+    if data:
+        body = urllib.urlencode(data) + "\r\n"
+        headers['Content-Type'] = 'application/x-www-form-urlencoded'
+        headers['Content-Length'] = len(body)
+
     for key, value in headers.items():
-        string += '\r\n%s: %s' % (key, value)
+        string += '%s: %s\r\n' % (key, value)
+
+    if body:
+        string += "\r\n" + body
+
+    print string
 
     key = ('localhost', 80)
 
