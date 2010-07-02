@@ -188,9 +188,13 @@ class WSGIPublication(object):
         """Publish the request into the response.
         """
         parents = None
+        published_content = None
 
         def last_content():
-            return parents[0] if parents else None
+            content = published_content
+            if content is None:
+                return parents[0] if parents is not None else None
+            return content
 
         try:
             self.start()
