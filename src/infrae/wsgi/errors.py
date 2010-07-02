@@ -9,6 +9,7 @@ from zope.publisher.interfaces.browser import IBrowserRequest
 from zope.security.interfaces import IForbidden
 
 import Acquisition
+from Acquisition import aq_parent, aq_inner
 
 grok.layer(IBrowserRequest)
 
@@ -31,6 +32,12 @@ class DefaultError(Acquisition.Implicit):
 
     def __init__(self, error):
         self.error = error
+
+    def getPhysicalPath(self):
+        parent = aq_parent(aq_inner(self))
+        if parent is None:
+            return tuple()
+        return parent.getPhysicalPath()
 
     @property
     def __provides__(self):
