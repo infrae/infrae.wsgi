@@ -165,7 +165,11 @@ class WSGIPublication(object):
     def error(self, error, last_known_obj):
         """Render and log an error.
         """
-        context = DefaultError(error).__of__(last_known_obj)
+        context = DefaultError(error)
+        try:
+            context = context.__of__(last_known_obj)
+        except:
+            pass
         error_page = queryMultiAdapter(
             (context, self.request), name='error.html')
 
