@@ -204,7 +204,6 @@ class WSGIPublication(object):
                         raise zExceptions.Redirect(cancel)
 
             ### Hack your virtual host. I am ashamed of this piece of code.
-            path = self.request.get('PATH_INFO')
 
             root_path = ('',)
             if 'HTTP_X_VHM_ROOT' in self.request.environ:
@@ -212,6 +211,7 @@ class WSGIPublication(object):
                 root_path = self.request.environ['HTTP_X_VHM_ROOT'].split('/')
                 self.request['PATH_INFO'] = path
 
+            path = self.request.get('PATH_INFO')
             self.request['PARENTS'] = [self.app.application,]
 
             # Get the virtual host story running
