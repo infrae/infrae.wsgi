@@ -12,11 +12,11 @@ class MockWSGIStartResponse(object):
     of WSGI. It records any call to it.
     """
 
-    __slots__ = ['status', '__headers', 'data',]
+    __slots__ = ['status', '__headers', 'data']
 
     def __init__(self):
         self.status = None
-        self.headers = None
+        self.__headers = None
         self.data = []
 
     @apply
@@ -88,6 +88,7 @@ class MockRequest(Mocker):
         super(MockRequest, self).__init__()
         self.response = response
         self.args = args
+        self.environ = {}
         self.__data = data
         self.__view = view
         self.__tries = retry

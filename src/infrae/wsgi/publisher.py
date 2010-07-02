@@ -2,6 +2,7 @@
 # See also LICENSE.txt
 # $Id$
 
+from urlparse import urlparse
 from tempfile import TemporaryFile
 from cStringIO import StringIO
 import socket
@@ -27,6 +28,14 @@ from infrae.wsgi.log import logger, log_last_error, ErrorSupplement
 
 CHUNK_SIZE = 1<<16              # 64K
 
+def set_virtual_host(request, virtual_host):
+    url = urlparse(virtual_host)
+    if ':' in url.netloc:
+        hostname, port = url.netloc.split(':', 1)
+        request.setServerURL(url.scheme, hostname, int(port))
+    else:
+        request.setServerURL(url.scheme, url.netloc)
+    request.setVirtualRoot(url.path.split('/'))
 
 
 def call_object(obj, args, request):
@@ -178,11 +187,10 @@ class WSGIPublication(object):
     def publish(self):
         """Publish the request into the response.
         """
-        parents = None
-        published_content = None
 
         def last_content():
-            return parents[0] if parents is not None else None
+            parents = self.request['PARENTS']
+            return parents[0] if parents else None
 
         try:
             self.start()
@@ -196,8 +204,15 @@ class WSGIPublication(object):
                         raise zExceptions.Redirect(cancel)
 
             # Get the path list.
-            path = self.request.get('PATH_INFO')
             self.request['PARENTS'] = parents = [self.app.application,]
+
+            # This should be in request __init__ but it needs
+            # self.request['PARENTS'] set properly.
+            if 'HTTP_X_VHM_HOST' in self.request.environ.keys():
+                set_virtual_host(
+                    self.request,
+                    self.request.environ['HTTP_X_VHM_HOST'])
+            path = self.request.get('PATH_INFO')
 
             # Get object to publish/render
             published_content = self.request.traverse(
