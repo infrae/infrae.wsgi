@@ -210,7 +210,7 @@ class WSGIPublication(object):
                 path = self.request.environ['HTTP_X_VHM_ROOT']
                 for part in path.split('/'):
                     if part:
-                        root = root.unrestrictedTraverse(part)
+                        root = root.unrestrictedTraverse([part,])
 
             self.request['PARENTS'] = [root,]
 
