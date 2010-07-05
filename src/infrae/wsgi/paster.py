@@ -10,6 +10,7 @@ from Zope2 import startup
 from infrae.wsgi.publisher import WSGIApplication
 from zope.event import notify
 from zope.processlifetime import ProcessStarting
+import App.config
 import Zope2
 
 logger = logging.getLogger('infrae.wsgi')
@@ -20,7 +21,6 @@ def configure_zope(config_filename, debug_mode=False):
     """
     from Zope2.Startup import options, handlers
     import AccessControl
-    import App.config
 
     del sys.argv[1:]
     opts = options.ZopeOptions()
@@ -41,11 +41,22 @@ def configure_zope(config_filename, debug_mode=False):
 def set_zope_debug_mode(debug_mode):
     """Set the Zope debug mode to the given value.
     """
-    import App.config
     config = App.config.getConfiguration()
     config.debug_mode = debug_mode and 1 or 0
     import Globals
     Globals.DevelopmentMode = config.debug_mode
+
+
+def mount_all_databases():
+    """Call this to mount all available Zope databases.
+    """
+    config = App.config.getConfiguration()
+    connection = Zope2.DB.open()
+    root = connection.root()['Application']
+    for path, name in config.dbtab.listMountPaths():
+        logger.info("Mount %s on %s" % (name, path))
+        root.unrestrictedTraverse(path)
+    connection.close()
 
 
 def boot_zope(config_filename, debug_mode=False):
@@ -56,6 +67,7 @@ def boot_zope(config_filename, debug_mode=False):
 
     try:
         startup()
+        mount_all_databases()
     except Exception:
         if debug_mode:
             # If debug_mode is on, debug possible starting errors.
