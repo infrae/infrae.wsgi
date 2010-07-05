@@ -15,7 +15,7 @@
                       tal:attributes="href error/url"
                       tal:content="error/url">Error URL</a> on
           <span tal:content="error/time">time</span>:
-          <pre tal:content="structure error/report">
+          <pre tal:content="error/report">
             Error detail.
           </pre>
         </li>
