@@ -54,8 +54,9 @@ def mount_all_databases():
     connection = Zope2.DB.open()
     root = connection.root()['Application']
     for path, name in config.dbtab.listMountPaths():
-        logger.info("Mount %s on %s" % (name, path))
-        root.unrestrictedTraverse(path)
+        if path != '/':
+            logger.info("Mount %s on %s" % (name, path))
+            root.unrestrictedTraverse(path)
     connection.close()
 
 
