@@ -19,6 +19,7 @@ from ZODB.POSException import ConflictError
 from zope.component import queryMultiAdapter
 from zope.event import notify
 from zope.interface import implements
+from zope.site.hooks import getSite
 from zope.publisher.interfaces.browser import IDefaultBrowserLayer
 from zope.security.management import newInteraction, endInteraction
 import Zope2
@@ -166,9 +167,14 @@ class WSGIPublication(object):
     def error(self, error, last_known_obj):
         """Render and log an error.
         """
-        context = DefaultError(error)
-        if IAcquirer.providedBy(last_known_obj):
-            context = context.__of__(last_known_obj)
+        if not IAcquirer.providedBy(last_known_obj):
+            last_known_obj = getSite()
+        if not IAcquirer.providedBy(last_known_obj):
+            logger.error('No Zope context available on last error')
+            self.response.setStatus(500)
+            self.response.setBody(DEFAULT_ERROR_TEMPLATE)
+            return
+        context = DefaultError(error).__of__(last_known_obj)
         error_page = queryMultiAdapter(
             (context, self.request), name='error.html')
 
