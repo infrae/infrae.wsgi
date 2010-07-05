@@ -1,0 +1,25 @@
+<html>
+  <head>
+    <title>Error log</title>
+  </head>
+  <body>
+    <h1>Error Log</h1>
+    <tal:noerrors tal:condition="not:view/errors">
+      <p>There is no errors.</p>
+    </tal:noerrors>
+    <tal:errors tal:condition="view/errors">
+      <p>There are <span tal:replace="python:len(view.errors)" /> error(s).</p>
+      <ul>
+        <li tal:repeat="error view/errors">
+          Error at <a href="#"
+                      tal:attributes="href error/url"
+                      tal:content="error/url">Error URL</a> on
+          <span tal:content="error/time">time</span>:
+          <pre tal:content="structure error/report">
+            Error detail.
+          </pre>
+        </li>
+      </ul>
+    </tal:errors>
+  </body>
+</html>

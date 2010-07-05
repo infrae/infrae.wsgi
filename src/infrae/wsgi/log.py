@@ -2,17 +2,19 @@
 # See also LICENSE.txt
 # $Id$
 
-from Acquisition import aq_base
-from zExceptions.ExceptionFormatter import format_exception
-from zope.browser.interfaces import IView
-
 from cgi import escape
+from datetime import datetime
 import sys
 import logging
 import collections
 
-logger = logging.getLogger('infrae.wsgi')
+from Acquisition import aq_base
+from zExceptions.ExceptionFormatter import format_exception
+from zope.browser.interfaces import IView
+from zope.interface import Interface
+from five import grok
 
+logger = logging.getLogger('infrae.wsgi')
 
 
 def object_name(obj):
@@ -26,6 +28,16 @@ def object_path(obj):
     except:
         pass
     return 'n/a'
+
+
+class ErrorLogView(grok.View):
+    grok.context(Interface)
+    grok.name('errorlog.html')
+    grok.require('zope2.ViewManagementScreens')
+
+    def update(self):
+        self.errors = reporter.get_last_errors()
+
 
 
 class ErrorSupplement(object):
@@ -61,6 +73,11 @@ class ErrorReporter(object):
         self.__last_errors = collections.deque([], 20)
         self.__loggable_errors = [
             'NotFound', 'Redirect', 'Unauthorized', 'BrokenReferenceError']
+
+    def get_last_errors(self):
+        """Return all last errors.
+        """
+        return list(self.__last_errors)
 
     def is_loggable(self, error):
         """Tells you if this error is loggable.
@@ -102,7 +119,8 @@ class ErrorReporter(object):
         """Log a given error.
         """
         logger.error(report)
-        self.__last_errors.append((url, report))
+        self.__last_errors.append(
+            {'url': url, 'report': report, 'time': datetime.now()})
 
 
 reporter = ErrorReporter()
