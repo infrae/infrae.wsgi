@@ -2,8 +2,9 @@
 # See also LICENSE.txt
 # $Id$
 
-import re
 import base64
+import re
+import urllib
 
 from AccessControl.SecurityManagement import (
     getSecurityManager, setSecurityManager)
@@ -224,20 +225,20 @@ class ResponseParser(object):
 
     __str__ = getOutput
 
-import urllib
 
-def http(string, handle_errors=False, headers={}, parsed=False,
-         data={}, auth=""):
+def http(string, handle_errors=False, headers=None, parsed=False,
+         data=None, auth=""):
     """This function behave like the HTTPCaller of
     zope.app.testing.functional.
     """
     string += "\r\n"
     body = ""
+    if headers is None:
+        headers = {}
     if auth:
-        headers['Authorization'] = \
-            'Basic %s' % ("%s:%s" % (auth, auth,)).encode('base64')
-
-    if data:
+        headers['Authorization'] = 'Basic %s' % (
+            "%s:%s" % (auth, auth,)).encode('base64')
+    if data is not None:
         body = urllib.urlencode(data)
         headers['Content-Type'] = 'application/x-www-form-urlencoded'
         headers['Content-Length'] = len(body)
