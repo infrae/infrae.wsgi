@@ -91,7 +91,9 @@ class ErrorReporter(object):
         """Build an error report and log the last available error.
         """
         error_type, error_value, traceback = sys.exc_info()
-        if (not response.debug_mode) and (not self.is_loggable(error_value)):
+        if ((not extra) and
+            (not response.debug_mode) and
+            (not self.is_loggable(error_value))):
             return
 
         log_entry = ['\n']
