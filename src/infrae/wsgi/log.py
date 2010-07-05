@@ -77,7 +77,9 @@ class ErrorReporter(object):
     def get_last_errors(self):
         """Return all last errors.
         """
-        return list(self.__last_errors)
+        errors = list(self.__last_errors)
+        errors.reverse()
+        return errors
 
     def is_loggable(self, error):
         """Tells you if this error is loggable.
