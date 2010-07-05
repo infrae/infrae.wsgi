@@ -8,8 +8,10 @@ from zope.publisher.interfaces import INotFound
 from zope.publisher.interfaces.browser import IBrowserRequest
 from zope.security.interfaces import IForbidden
 
-import Acquisition
+from AccessControl import ClassSecurityInfo
 from Acquisition import aq_parent, aq_inner
+from App.class_init import InitializeClass
+import Acquisition
 
 grok.layer(IBrowserRequest)
 
@@ -29,6 +31,8 @@ class DefaultError(Acquisition.Implicit):
     """Wrapper for errors. The are the context, with all acquisition
     and Zope Component Architecture working.
     """
+    security = ClassSecurityInfo()
+    security.declareObjectPublic()
 
     def __init__(self, error):
         self.error = error
@@ -38,6 +42,9 @@ class DefaultError(Acquisition.Implicit):
         if hasattr(self.error, '__provides__'):
             return self.error.__provides__
         return providedBy(self.error)
+
+
+InitializeClass(DefaultError)
 
 
 class NotFound(grok.View):
