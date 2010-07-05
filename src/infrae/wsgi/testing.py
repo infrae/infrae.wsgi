@@ -238,7 +238,7 @@ def http(string, handle_errors=False, headers={}, parsed=False,
             'Basic %s' % ("%s:%s" % (auth, auth,)).encode('base64')
 
     if data:
-        body = urllib.urlencode(data) + "\r\n"
+        body = urllib.urlencode(data)
         headers['Content-Type'] = 'application/x-www-form-urlencoded'
         headers['Content-Length'] = len(body)
 
@@ -246,7 +246,7 @@ def http(string, handle_errors=False, headers={}, parsed=False,
         string += '%s: %s\r\n' % (key, value)
 
     if body:
-        string += "\r\n" + body
+        string += body
 
     key = ('localhost', 80)
 
@@ -257,7 +257,7 @@ def http(string, handle_errors=False, headers={}, parsed=False,
     app = app_fn(handle_errors=handle_errors)
 
     socket = wsgi_intercept.wsgi_fake_socket(app, 'localhost', 80, '')
-    socket.sendall(string.lstrip())
+    socket.sendall(string)
     result = socket.makefile()
     response = result.getvalue()
     if parsed:
