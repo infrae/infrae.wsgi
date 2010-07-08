@@ -161,7 +161,6 @@ class ResponseTestCase(unittest.TestCase):
         self.assertEqual(
             self.start_response.headers,
             [('Content-Length', '0'),
-             ('Content-Type', 'text/html;charset=utf-8'),
              ('Location', 'http://infrae.com')])
         self.assertEqual(self.start_response.data, [])
 

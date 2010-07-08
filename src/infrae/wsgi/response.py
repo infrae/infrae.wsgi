@@ -96,8 +96,7 @@ class WSGIResponse(object):
         # This is deprecated, please return an iterable instead of
         # using write()
         if self.__write is None:
-            notify(PubBeforeStreaming(self))
-            self.__write = self.startWSGIResponse(set_content_length=False)
+            self.__write = self.startWSGIResponse(stream=True)
         try:
             self.__write(data)
         except (socket.error, IOError):
@@ -164,24 +163,48 @@ class WSGIResponse(object):
             cookie[cookie_key] = cookie_value
         cookie['value'] = value
 
-    def startWSGIResponse(self, set_content_length=True):
+    def startWSGIResponse(self, stream=False):
         if self.__started:
             return self.__write
         self.__started = True
 
-        if not self.headers.has_key('Content-Length') and set_content_length:
-            content_length = None
-            if isinstance(self.body, str) or \
-                    isinstance(self.body, unicode) or \
-                    IStreamIterator.providedBy(self.body):
-                content_length = len(self.body)
-            elif self.body is None:
-                content_length = 0
-            if content_length is not None:
-                self.headers['Content-Length'] = content_length
-        if not self.headers.has_key('Content-Type'):
-            self.headers['Content-Type'] = 'text/html;charset=%s' % (
-                self.default_charset,)
+        # If the body is an IResult, it is a case of streaming where
+        # we don't fix headers.
+        stream = stream or IResult.providedBy(self.body)
+
+        if not stream:
+            # If we are not streaming, we try to set Content-Length,
+            # Content-Type and adapt status if there is no content.
+            if not self.headers.has_key('Content-Length'):
+                content_length = None
+                if isinstance(self.body, str) or \
+                        isinstance(self.body, unicode) or \
+                        IStreamIterator.providedBy(self.body):
+                    content_length = len(self.body)
+                elif self.body is None:
+                    content_length = 0
+                if content_length is not None:
+                    self.headers['Content-Length'] = content_length
+
+            content_length = self.headers['Content-Length']
+            if not content_length and self.status == 200:
+                # Set no content status if there is no content
+                self.status = 204
+
+            if not self.headers.has_key('Content-Type'):
+                if content_length:
+                    # If there is content and no Content-Type, set HTML
+                    self.headers['Content-Type'] = 'text/html;charset=%s' % (
+                        self.default_charset,)
+        else:
+            # Fire event before streaming
+            notify(PubBeforeStreaming(self))
+
+            # Fix default Content-Type
+            if not self.headers.has_key('Content-Type'):
+                self.headers['Content-Type'] = 'text/html;charset=%s' % (
+                    self.default_charset,)
+
 
         formatted_status = "%d %s" % (
             self.status, status_reasons.get(self.status, 'OK'))

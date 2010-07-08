@@ -22,8 +22,12 @@ from infrae.wsgi.tests.mockers import (
 
 # Some test views
 
-def hello_world():
+def hello_view():
     return 'Hello world!'
+
+
+def no_content_view():
+    return u''
 
 
 def bugous_view():
@@ -154,10 +158,10 @@ class PublisherTestCase(unittest.TestCase):
             response=self.response,
             retry=2)
 
-    def test_hello_world(self):
+    def test_hello_view(self):
         """Test a working view which says hello world.
         """
-        request = self.new_request_for(hello_world)
+        request = self.new_request_for(hello_view)
         publication = WSGIPublication(self.app, request, self.response)
         result = publication()
 
@@ -167,7 +171,7 @@ class PublisherTestCase(unittest.TestCase):
         self.assertEqual(
             self.app.transaction.mocker_called(),
             [('begin', (), {}),
-             ('recordMetaData', (hello_world, request), {}),
+             ('recordMetaData', (hello_view, request), {}),
              ('commit', (), {})])
         self.assertEqual(
             self.app.response.status, '200 OK')
@@ -182,6 +186,40 @@ class PublisherTestCase(unittest.TestCase):
         body = consume_wsgi_result(result)
 
         self.assertEqual(body, 'Hello world!')
+        self.assertEqual(
+            request.mocker_called(),  [('close', (), {})])
+        self.assertEqual(
+            self.app.transaction.mocker_called(), [])
+        self.assertEqual(
+            get_event_names(), [])
+
+    def test_no_content(self):
+        """Test a working view with no content.
+        """
+        request = self.new_request_for(no_content_view)
+        publication = WSGIPublication(self.app, request, self.response)
+        result = publication()
+
+        self.assertEqual(
+            request.mocker_called(),
+            [('processInputs', (), {})])
+        self.assertEqual(
+            self.app.transaction.mocker_called(),
+            [('begin', (), {}),
+             ('recordMetaData', (no_content_view, request), {}),
+             ('commit', (), {})])
+        self.assertEqual(
+            self.app.response.status, '204 No Content')
+        self.assertEqual(
+            self.app.response.headers,
+            [('Content-Length', '0')])
+        self.assertEqual(
+            get_event_names(),
+            ['PubStart', 'PubAfterTraversal', 'PubBeforeCommit', 'PubSuccess'])
+
+        body = consume_wsgi_result(result)
+
+        self.assertEqual(body, '')
         self.assertEqual(
             request.mocker_called(),  [('close', (), {})])
         self.assertEqual(
@@ -212,7 +250,7 @@ class PublisherTestCase(unittest.TestCase):
             [('Content-Type', 'text/html;charset=utf-8')])
         self.assertEqual(
             get_event_names(),
-            ['PubStart', 'PubAfterTraversal'])
+            ['PubStart', 'PubAfterTraversal', 'PubBeforeStreaming'])
 
         body = consume_wsgi_result(result)
 
@@ -249,7 +287,7 @@ class PublisherTestCase(unittest.TestCase):
             [('Content-Type', 'text/html;charset=utf-8')])
         self.assertEqual(
             get_event_names(),
-            ['PubStart', 'PubAfterTraversal'])
+            ['PubStart', 'PubAfterTraversal', 'PubBeforeStreaming'])
 
         self.assertRaises(ValueError, consume_wsgi_result, result)
 
@@ -287,7 +325,7 @@ class PublisherTestCase(unittest.TestCase):
             [('Content-Type', 'text/html;charset=utf-8')])
         self.assertEqual(
             get_event_names(),
-            ['PubStart', 'PubAfterTraversal'])
+            ['PubStart', 'PubAfterTraversal', 'PubBeforeStreaming'])
 
         self.assertRaises(ConflictError, consume_wsgi_result, result)
 
@@ -505,7 +543,6 @@ class PublisherTestCase(unittest.TestCase):
         self.assertEqual(
             self.app.response.headers,
             [('Content-Length', '0'),
-             ('Content-Type', 'text/html;charset=utf-8'),
              ('Location', 'http://infrae.com/products/silva')])
         self.assertEqual(
             get_event_names(),
@@ -540,7 +577,6 @@ class PublisherTestCase(unittest.TestCase):
         self.assertEqual(
             self.app.response.headers,
             [('Content-Length', '0'),
-             ('Content-Type', 'text/html;charset=utf-8'),
              ('Www-Authenticate', 'basic realm="Zope"')])
         self.assertEqual(
             get_event_names(),
@@ -594,22 +630,22 @@ class PublisherTestCase(unittest.TestCase):
         """
         self.app.transaction.mocker_set_conflict(True)
 
-        request = self.new_request_for(hello_world)
+        request = self.new_request_for(hello_view)
         publication = WSGIPublication(self.app, request, self.response)
         body = consume_wsgi_result(publication())
 
         self.assertEqual(
             self.app.transaction.mocker_called(),
             [('begin', (), {}),
-             ('recordMetaData', (hello_world, request), {}),
+             ('recordMetaData', (hello_view, request), {}),
              ('commit', (), {}),
              ('abort', (), {}),
              ('begin', (), {}),
-             ('recordMetaData', (hello_world, request), {}),
+             ('recordMetaData', (hello_view, request), {}),
              ('commit', (), {}),
              ('abort', (), {}),
              ('begin', (), {}),
-             ('recordMetaData', (hello_world, request), {}),
+             ('recordMetaData', (hello_view, request), {}),
              ('commit', (), {}),
              ('abort', (), {})])
         self.assertEqual(self.app.response.status, '503 Service Unavailable')
