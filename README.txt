@@ -32,7 +32,7 @@ Except than:
 
 It does not:
 
-- Provide Zope 2 as a collection of middleware, as Zope 2 paradigm /
+- Provide Zope 2 as a collection of WSGI middlewares, as Zope 2 paradigm /
   code base is not good for it,
 
 - Do all fancy request body changes that old Zope 2 publisher does, as
@@ -124,7 +124,7 @@ You will be actually able to test applications that do use streaming::
 
 
    class CorpTestCase(unittest.TestCase):
-      layer = Browser(corp.testpackage)
+      layer = BrowserLayer(corp.testpackage)
 
       def setUp(self):
           self.root = self.layer.get_application()
