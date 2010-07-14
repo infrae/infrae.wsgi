@@ -7,7 +7,7 @@ import re
 import urllib
 
 from AccessControl.SecurityManagement import (
-    getSecurityManager, setSecurityManager)
+    getSecurityManager, setSecurityManager, noSecurityManager)
 from transaction import commit
 
 from infrae.testing import Zope2Layer, suite_from_package, TestCase
@@ -98,6 +98,7 @@ class TestBrowserWSGIResult(object):
             # Backup ZCA site and security manager
             self.__site = getSite()
             self.__security = getSecurityManager()
+            noSecurityManager()
             self.__result = self.app(self.environ, self.start_response)
             self.__next = iter(self.__result).next
         return self.__next()
