@@ -98,6 +98,8 @@ class WSGIResponse(object):
         if self.__write is None:
             self.__write = self.startWSGIResponse(stream=True)
         try:
+            if isinstance(data, unicode):
+                data = data.encode(self.default_charset)
             self.__write(data)
         except (socket.error, IOError):
             # If we can't write anymore to the socket, abort all the
