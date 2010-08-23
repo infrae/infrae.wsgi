@@ -186,10 +186,11 @@ class WSGIResponse(object):
                 if content_length is not None:
                     self.headers['Content-Length'] = content_length
 
-            content_length = self.headers['Content-Length']
-            if not content_length and self.status == 200:
-                # Set no content status if there is no content
-                self.status = 204
+            if self.headers.has_key('Content-Length'):
+                content_length = self.headers['Content-Length']
+                if not content_length and self.status == 200:
+                    # Set no content status if there is no content
+                    self.status = 204
 
             if not self.headers.has_key('Content-Type'):
                 if content_length:
