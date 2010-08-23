@@ -145,8 +145,9 @@ class WSGIPublication(object):
         """
         if self.publication_done:
             return
-        if self.response.getStatus() < 400:
+        if self.response.getStatus() < 404:
             # We want to commit the transaction in case of redirects
+            # and unauthorized.
             self.commit()
         else:
             self.abort()
