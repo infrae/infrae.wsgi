@@ -572,7 +572,7 @@ class PublisherTestCase(unittest.TestCase):
             self.app.transaction.mocker_called(),
             [('begin', (), {}),
              ('recordMetaData', (unauthorized_view, request), {}),
-             ('abort', (), {})])
+             ('commit', (), {})])
         self.assertEqual(self.app.response.status, '401 Unauthorized')
         self.assertEqual(
             self.app.response.headers,
@@ -580,7 +580,7 @@ class PublisherTestCase(unittest.TestCase):
              ('Www-Authenticate', 'basic realm="Zope"')])
         self.assertEqual(
             get_event_names(),
-            ['PubStart', 'PubAfterTraversal', 'PubBeforeAbort', 'PubFailure'])
+            ['PubStart', 'PubAfterTraversal', 'PubBeforeCommit', 'PubSuccess'])
 
         body = consume_wsgi_result(result)
 
@@ -605,7 +605,7 @@ class PublisherTestCase(unittest.TestCase):
             self.app.transaction.mocker_called(),
             [('begin', (), {}),
              ('recordMetaData', (forbidden_view, request), {}),
-             ('abort', (), {})])
+             ('commit', (), {})])
         self.assertEqual(self.app.response.status, '403 Forbidden')
         self.assertEqual(
             self.app.response.headers,
@@ -613,7 +613,7 @@ class PublisherTestCase(unittest.TestCase):
              ('Content-Type', 'text/html;charset=utf-8')])
         self.assertEqual(
             get_event_names(),
-            ['PubStart', 'PubAfterTraversal', 'PubBeforeAbort', 'PubFailure'])
+            ['PubStart', 'PubAfterTraversal', 'PubBeforeCommit', 'PubSuccess'])
 
         body = consume_wsgi_result(result)
 
