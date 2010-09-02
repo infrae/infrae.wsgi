@@ -132,9 +132,10 @@ class TestBrowserMiddleware(object):
 
     def __call__(self, environ, start_response):
         # Handle debug mode
-        handle_errors = environ.get(
-            'HTTP_X_ZOPE_HANDLE_ERRORS', self.default_handle_errors)
-        environ['wsgi.handleErrors'] = handle_errors == 'True'
+        if 'wsgi.handleErrors' not in environ:
+            handle_errors = environ.get(
+                'HTTP_X_ZOPE_HANDLE_ERRORS', self.default_handle_errors)
+            environ['wsgi.handleErrors'] = handle_errors == 'True'
 
         # Handle authorization
         auth_key = 'HTTP_AUTHORIZATION'
@@ -168,6 +169,8 @@ class BrowserLayer(Zope2Layer):
         def factory(handle_errors=True):
             return TestBrowserMiddleware(
                 wsgi_app, self._test_connection, handle_errors)
+        self._test_wsgi_application = TestBrowserMiddleware(
+            wsgi_app, self._test_connection, True)
 
         for host in TEST_HOSTS:
             wsgi_intercept.add_wsgi_intercept(host, 80, factory)
@@ -175,6 +178,7 @@ class BrowserLayer(Zope2Layer):
     def testTearDown(self):
         for host in TEST_HOSTS:
             wsgi_intercept.remove_wsgi_intercept(host, 80)
+        self._test_wsgi_application = None
         super(BrowserLayer, self).testTearDown()
 
 
