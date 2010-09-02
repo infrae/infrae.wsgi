@@ -19,6 +19,10 @@ class HTTPHeaders(dict):
     def __getitem__(self, key):
         return dict.__getitem__(self, key.lower())
 
+    def update(self, values):
+        for key, value in values:
+            dict.__setitem__(self, key.lower(), value)
+
     def get(self, key, default=None):
         return dict.get(self, key.lower(), default)
 
