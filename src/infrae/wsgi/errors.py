@@ -9,7 +9,6 @@ from zope.publisher.interfaces.browser import IBrowserRequest
 from zope.security.interfaces import IForbidden
 
 from AccessControl import ClassSecurityInfo
-from Acquisition import aq_parent, aq_inner
 from App.class_init import InitializeClass
 import Acquisition
 
