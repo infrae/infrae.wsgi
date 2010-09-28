@@ -2,6 +2,7 @@
 # See also LICENSE.txt
 # $Id$
 
+import threading
 import logging
 import pdb
 import sys
@@ -14,6 +15,8 @@ import App.config
 import Zope2
 
 logger = logging.getLogger('infrae.wsgi')
+bootstrap_lock = threading.Lock()
+bootstrap_done = False
 
 
 def configure_zope(config_filename, debug_mode=False):
@@ -63,26 +66,35 @@ def mount_all_databases():
 def boot_zope(config_filename, debug_mode=False):
     """Boot Zope.
     """
-    starter = configure_zope(config_filename, debug_mode)
-    logger.info("Zope configured")
-
+    global bootstrap_done
+    bootstrap_lock.acquire()
     try:
-        startup()
-        mount_all_databases()
-    except Exception:
-        if debug_mode:
-            # If debug_mode is on, debug possible starting errors.
-            print "%s:" % sys.exc_info()[0]
-            print sys.exc_info()[1]
-            pdb.post_mortem(sys.exc_info()[2])
-        raise
+        if bootstrap_done:
+            logger.info("Zope already configured, skipping configuration")
+            return
+        configure_zope(config_filename, debug_mode)
+        logger.info("Zope configured")
 
-    # Some products / Zope code reset the debug mode. Re-set it again.
-    set_zope_debug_mode(debug_mode)
+        try:
+            startup()
+            mount_all_databases()
+        except Exception:
+            if debug_mode:
+                # If debug_mode is on, debug possible starting errors.
+                print "%s:" % sys.exc_info()[0]
+                print sys.exc_info()[1]
+                pdb.post_mortem(sys.exc_info()[2])
+            raise
 
-    # Notify start of application
-    notify(ProcessStarting())
-    logger.info("Zope started")
+        # Some products / Zope code reset the debug mode. Re-set it again.
+        set_zope_debug_mode(debug_mode)
+
+        # Notify start of application
+        notify(ProcessStarting())
+        bootstrap_done = True
+        logger.info("Zope started")
+    finally:
+        bootstrap_lock.release()
 
 
 def zope2_application_factory(global_conf, zope_conf, **options):
@@ -95,4 +107,3 @@ def zope2_application_factory(global_conf, zope_conf, **options):
         Zope2.bobo_application,
         Zope2.zpublisher_transactions_manager,
         not debug_mode)
-
