@@ -1,13 +1,21 @@
 Changes
 =======
 
-1.1 (unreleased)
+1.1 (2010-10-07)
 ----------------
 
-- ...
+- Fix a bug where `Content-Length` is not set and cannot be set.
 
-1.0 (2010/07/15)
+- Correctly encode payload when needed before sending it (if it was a
+  unicode string).
+
+- Error codes less when 500 triggers a commit now, this let you
+  support login pages that uses a Zope session ID.
+
+- Add some hooks in the testing code to be more extensible (used for
+  `infrae.testbrowser`).
+
+1.0 (2010-07-15)
 ----------------
 
 - Initial release.
-
