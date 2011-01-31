@@ -11,8 +11,14 @@ import zExceptions
 
 from infrae.wsgi.headers import HTTPHeaders
 
+from cgi import escape
 from urllib import quote
 import socket
+import re
+
+
+HEAD_REGEXP = re.compile('(<head[^>]*>)', re.I)
+BASE_REGEXP = re.compile('(<base.*?>)',re.I)
 
 
 class AbortPublication(Exception):
@@ -83,6 +89,7 @@ class WSGIResponse(object):
         self.cookies = {}
         self.body = None
         self.debug_mode = debug_mode
+        self.__base = None
         self.__environ = environ
         self.__start_response = start_response
         self.__started = False
@@ -107,13 +114,37 @@ class WSGIResponse(object):
             raise AbortPublication(started=True)
 
     def setBase(self, base):
-        # HTTPResponse compatibility dumb
-        pass
+        # HTTPResponse compatibility: need to randomly insert a base
+        # header in HTML.
+        if base and not base.endswith('/'):
+            base += '/'
+        self.__base = base
+
+    def __insertBase(self, body):
+        # HTTPResponse compatibility: insert a base tag if
+        # needed. There is no way to get ride of that, several ZMI
+        # screens rely on this (form using :method variables).
+        content_type = self.headers.get('content-type', '').split(';')[0]
+        if content_type and (content_type != 'text/html'):
+            return body
+
+        if self.__base:
+            if body:
+                match = HEAD_REGEXP.search(body)
+                if match is not None:
+                    index = match.start(0) + len(match.group(0))
+                    ibase = BASE_REGEXP.search(body)
+                    if ibase is None:
+                        body = '%s\n<base href="%s" />\n%s' % (
+                            body[:index], escape(self.__base, 1), body[index:])
+        return body
 
     def setBody(self, body, **options):
         # We ignore options
-        if isinstance(body, unicode):
-            body = body.encode(self.default_charset)
+        if isinstance(body, basestring):
+            body = self.__insertBase(body)
+            if isinstance(body, unicode):
+                body = body.encode(self.default_charset)
         self.body = body
 
     def setStatus(self, status, msg=None):
@@ -179,9 +210,8 @@ class WSGIResponse(object):
             # Content-Type and adapt status if there is no content.
             if not self.headers.has_key('Content-Length'):
                 content_length = None
-                if isinstance(self.body, str) or \
-                        isinstance(self.body, unicode) or \
-                        IStreamIterator.providedBy(self.body):
+                if (isinstance(self.body, basestring) or
+                    IStreamIterator.providedBy(self.body)):
                     content_length = len(self.body)
                 elif self.body is None:
                     content_length = 0

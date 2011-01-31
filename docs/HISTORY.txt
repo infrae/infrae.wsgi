@@ -1,6 +1,14 @@
 Changes
 =======
 
+1.2 (unreleased)
+----------------
+
+- Add the ZPublisher *insertBase* functionality: if a base is set by
+  the request, and we render HTML, with an HEAD tag and no BASE tag,
+  insert a BASE tag with the value provided by the request. This fix
+  broken ZMI screens.
+
 1.1 (2010-10-07)
 ----------------
 

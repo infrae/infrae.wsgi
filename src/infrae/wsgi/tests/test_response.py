@@ -26,6 +26,23 @@ class ResponseTestCase(unittest.TestCase):
             [('Content-Length', '12'),
              ('Content-Type', 'text/html;charset=utf-8')])
         self.assertEqual(self.start_response.data, [])
+        self.assertEqual(response.body, '<p>Hello</p>')
+
+    def test_simple_with_content_type(self):
+        """Test a simple reply where the content type have been set.
+        """
+        response = WSGIResponse({}, self.start_response)
+        response.setHeader('Content-type', 'text/html;charset=utf-8')
+        response.setBody('<p>Hello</p>')
+        response.startWSGIResponse()
+
+        self.assertEqual(self.start_response.status, '200 OK')
+        self.assertEqual(
+            self.start_response.headers,
+            [('Content-Length', '12'),
+             ('Content-Type', 'text/html;charset=utf-8')])
+        self.assertEqual(self.start_response.data, [])
+        self.assertEqual(response.body, '<p>Hello</p>')
 
     def test_status(self):
         """Test setting/getting a status.
@@ -163,6 +180,72 @@ class ResponseTestCase(unittest.TestCase):
             [('Content-Length', '0'),
              ('Location', 'http://infrae.com')])
         self.assertEqual(self.start_response.data, [])
+
+    def test_insert_base(self):
+        """Test inserting base: HTTPResponse compatiblity.
+        """
+        response = WSGIResponse({}, self.start_response)
+        # We need to set content-type and base to trigger the
+        # behavior, and have a full HTML page.
+        response.setHeader('Content-Type', 'text/html;charset=utf-8')
+        response.setBase('http://localhost/base')
+        response.setBody('<html><head><title>Test</title></head><body>Test!</body></html>')
+
+        response.startWSGIResponse()
+        self.assertEqual(self.start_response.status, '200 OK')
+        self.assertEqual(
+            self.start_response.headers,
+            [('Content-Length', '103'),
+             ('Content-Type', 'text/html;charset=utf-8')])
+        self.assertEqual(self.start_response.data, [])
+        self.assertEqual(
+            response.body,
+            '<html><head>\n<base href="http://localhost/base/" />\n'
+            '<title>Test</title></head><body>Test!</body></html>')
+
+    def test_no_insert_base_if_already_there(self):
+        """Test inserting base: don't override existing one:
+        HTTPResponse compatibility.
+        """
+        response = WSGIResponse({}, self.start_response)
+        # We need to set content-type and base to trigger the
+        # behavior, and have a full HTML page.
+        response.setHeader('Content-Type', 'text/html;charset=utf-8')
+        response.setBase('http://localhost/base')
+        response.setBody(
+            '<html><head><title>Test</title><base href="http://google.com/base" />'
+            '</head><body>Test!</body></html>')
+
+        response.startWSGIResponse()
+        self.assertEqual(self.start_response.status, '200 OK')
+        self.assertEqual(
+            self.start_response.headers,
+            [('Content-Length', '101'),
+             ('Content-Type', 'text/html;charset=utf-8')])
+        self.assertEqual(self.start_response.data, [])
+        self.assertEqual(
+            response.body,
+            '<html><head><title>Test</title><base href="http://google.com/base" />'
+            '</head><body>Test!</body></html>')
+
+    def test_no_insert_base_if_not_text_html(self):
+        """Test inserting base: only in text/html: HTTPResponse compatibility.
+        """
+        response = WSGIResponse({}, self.start_response)
+        response.setHeader('Content-Type', 'text/text')
+        response.setBase('http://localhost/base')
+        response.setBody('<html><head><title>Test</title></head><body>Test!</body></html>')
+
+        response.startWSGIResponse()
+        self.assertEqual(self.start_response.status, '200 OK')
+        self.assertEqual(
+            self.start_response.headers,
+            [('Content-Length', '63'),
+             ('Content-Type', 'text/text')])
+        self.assertEqual(self.start_response.data, [])
+        self.assertEqual(
+            response.body,
+            '<html><head><title>Test</title></head><body>Test!</body></html>')
 
     def test_cookies(self):
         """Try to set a cookie.
