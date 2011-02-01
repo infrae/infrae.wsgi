@@ -7,6 +7,7 @@ from tempfile import TemporaryFile
 from cStringIO import StringIO
 import socket
 import types
+import thread
 
 from AccessControl.SecurityManagement import noSecurityManager
 from Acquisition.interfaces import IAcquirer
@@ -72,6 +73,10 @@ class WSGIResult(object):
         self.request = request
         self.publisher = publisher
         self.__iteration_done = False
+        id = thread.get_ident()
+        if id in self.publisher.app.status:
+            raise ValueError('Corrumpted state: close not called')
+        self.publisher.app.status[id] = True
 
     def next(self):
         try:
@@ -84,6 +89,10 @@ class WSGIResult(object):
         return self
 
     def close(self):
+        id = thread.get_ident()
+        if id not in self.publisher.app.status:
+            raise ValueError("I am confused here")
+        del self.publisher.app.status[id]
         try:
             if not self.__iteration_done:
                 self.publisher.abort()
@@ -319,6 +328,7 @@ class WSGIApplication(object):
         self.transaction = transaction
         self.memory_maxsize = 2 << 20
         self.default_handle_errors = default_handle_errors
+        self.status = {}
 
     def save_input(self, environ):
         """We want to save the request input in order to be able to
