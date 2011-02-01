@@ -8,7 +8,6 @@ import sys
 import logging
 import collections
 
-from Acquisition import aq_base
 from zExceptions.ExceptionFormatter import format_exception
 from zope.browser.interfaces import IView
 from zope.interface import Interface
