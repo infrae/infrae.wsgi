@@ -46,8 +46,7 @@ setup(name='infrae.wsgi',
         'zope.publisher',
         'zope.security',
         'zope.component',
-        'zope.processlifetime',
-        'threadframe',
+        'zope.processlifetime'
         ],
       entry_points={
         'paste.app_factory': [

@@ -3,7 +3,7 @@ from five import grok
 from zope.interface import Interface
 
 import thread
-import threadframe
+import sys
 import traceback
 import time
 from cStringIO import StringIO
@@ -14,7 +14,7 @@ def dump_threads():
     Returns a string with the tracebacks.
     """
 
-    frames = threadframe.dict()
+    frames = sys._current_frames()
     this_thread_id = thread.get_ident()
     now = time.strftime("%Y-%m-%d %H:%M:%S")
     res = ["Threads traceback dump at %s\n" % now]
