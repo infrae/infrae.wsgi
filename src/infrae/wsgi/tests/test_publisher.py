@@ -584,6 +584,42 @@ class PublisherTestCase(unittest.TestCase):
 
         body = consume_wsgi_result(result)
 
+        self.assertEqual(body, '')
+        self.assertEqual(
+            request.mocker_called(),  [('close', (), {})])
+        self.assertEqual(
+            self.app.transaction.mocker_called(), [])
+        self.assertEqual(
+            get_event_names(), [])
+
+    def test_bugous_pas_handler(self):
+        """Test than an error in a PAS unauthorized handler is contained.
+        """
+        request = self.new_request_for(unauthorized_view)
+        response = WSGIResponse({}, self.app.response)
+        response._unauthorized = bugous_view # Set the bugous handler
+        publication = WSGIPublication(self.app, request, response)
+        result = publication()
+        self.assertEqual(
+            request.mocker_called(),
+            [('processInputs', (), {})])
+        self.assertEqual(
+            self.app.transaction.mocker_called(),
+            [('begin', (), {}),
+             ('recordMetaData', (unauthorized_view, request), {}),
+             ('commit', (), {})])
+        self.assertEqual(self.app.response.status, '401 Unauthorized')
+        self.assertEqual(
+            self.app.response.headers,
+            [('Content-Length', '0'),
+             ('Www-Authenticate', 'basic realm="Zope"')])
+        self.assertEqual(
+            get_event_names(),
+            ['PubStart', 'PubAfterTraversal', 'PubBeforeCommit', 'PubSuccess'])
+
+        body = consume_wsgi_result(result)
+
+        self.assertEqual(body, '')
         self.assertEqual(
             request.mocker_called(),  [('close', (), {})])
         self.assertEqual(

@@ -244,14 +244,27 @@ class WSGIPublication(object):
 
             if result is not None:
                 self.response.setBody(result)
-        except (ConflictError, Retry, AbortPublication) as error:
+        except (ConflictError, Retry, AbortPublication):
             # Conflict are managed at an higher level
             raise
-        except zExceptions.Unauthorized as error:
+        except zExceptions.Unauthorized:
+            # Manage unauthorized
             log_last_error(self.request, self.response, last_content())
             self.response.setStatus(401)
-            self.response._unauthorized()
+            try:
+                # To be compatible with PAS
+                self.response._unauthorized()
+            except Exception:
+                # The _unauthorised handler using PAS failed
+                log_last_error(
+                    self.request, self.response, obj=last_content(),
+                    extra="Error while processing the unauthorized PAS handler")
+                self.response.setStatus(401)
+                self.response.setBody("")
+                self.response.setHeader(
+                    'WWW-Authenticate', 'basic realm="%s"' % self.response.realm)
         except zExceptions.Redirect as error:
+            # Redirect
             self.response.redirect(str(error))
         except Exception as error:
             content = last_content()

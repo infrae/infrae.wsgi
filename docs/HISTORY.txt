@@ -4,6 +4,12 @@ Changes
 1.2 (unreleased)
 ----------------
 
+- Add a view ``debugzope.html`` that display a dump of the server
+  threads. You need to be manager to access it.
+
+- Handle buggy PAS unauthorized plugins, by catching any error, and
+  logging them. In case of problem, a basic 401 response is sent back.
+
 - Add the ZPublisher *insertBase* functionality: if a base is set by
   the request, and we render HTML, with an HEAD tag and no BASE tag,
   insert a BASE tag with the value provided by the request. This fix

@@ -259,7 +259,7 @@ class WSGIResponse(object):
         return (self.__started, [])
 
     def _unauthorized(self):
-        # Unauthorized is implemented like this to be compliant with PAS
+        # Unauthorized is implemented like this to be compliant with
         self.setHeader(
             'WWW-Authenticate', 'basic realm="%s"' % self.realm)
 
