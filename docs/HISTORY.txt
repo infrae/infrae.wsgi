@@ -1,7 +1,7 @@
 Changes
 =======
 
-1.2 (unreleased)
+1.2 (2011-02-02)
 ----------------
 
 - Add a view ``debugzope.html`` that display a dump of the server
