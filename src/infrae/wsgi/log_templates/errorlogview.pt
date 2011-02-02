@@ -21,5 +21,19 @@
         </li>
       </ul>
     </tal:errors>
+    <h2>Configure errors not to log</h2>
+    <form method="POST">
+      <label for="ignore_errors:list">Select error to ignore in the log</label><br />
+      <select name="ignore_errors:list" multiple="multiple">
+        <option tal:repeat="error view/all_errors"
+                tal:attributes="value error;
+                                selected python:error in view.ignored_errors and 'selected' or None"
+                tal:content="error">
+          Error
+        </option>
+      </select>
+      <br />
+      <input type="submit" name="ignore_errors_update" value="Set" />
+    </form>
   </body>
 </html>

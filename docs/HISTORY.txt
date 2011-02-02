@@ -7,6 +7,9 @@ Changes
 - Add a view ``debugzope.html`` that display a dump of the server
   threads. You need to be manager to access it.
 
+- You can from the ``errorlog.html`` configure the error you wish to
+  ignore (not log). This is a non persistent setting.
+
 - Handle buggy PAS unauthorized plugins, by catching any error, and
   logging them. In case of problem, a basic 401 response is sent back.
 

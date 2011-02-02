@@ -35,8 +35,13 @@ class ErrorLogView(grok.View):
     grok.require('zope2.ViewManagementScreens')
 
     def update(self):
-        self.errors = reporter.get_last_errors()
+        if 'ignore_errors_update' in self.request.form:
+            reporter.ignore_errors = self.request.form.get(
+                'ignore_errors', [])
 
+        self.all_errors = reporter.all_ignored_errors
+        self.ignored_errors = reporter.ignore_errors
+        self.errors = reporter.get_last_errors()
 
 
 class ErrorSupplement(object):
@@ -67,11 +72,20 @@ class ErrorSupplement(object):
 class ErrorReporter(object):
     """Utility to help error reporting.
     """
+    all_ignored_errors = [
+            'NotFound', 'Redirect', 'Unauthorized', 'BrokenReferenceError']
 
     def __init__(self):
-        self.__last_errors = collections.deque([], 20)
-        self.__loggable_errors = [
-            'NotFound', 'Redirect', 'Unauthorized', 'BrokenReferenceError']
+        self.__last_errors = collections.deque([], 25)
+        self.__ignore_errors = self.all_ignored_errors
+
+    @apply
+    def ignore_errors():
+        def getter(self):
+            return self.__ignore_errors
+        def setter(self, value):
+            self.__ignore_errors = set(value).intersection(set(self.all_ignored_errors))
+        return property(getter, setter)
 
     def get_last_errors(self):
         """Return all last errors.
@@ -84,14 +98,13 @@ class ErrorReporter(object):
         """Tells you if this error is loggable.
         """
         error_name = error.__class__.__name__
-        return error_name not in self.__loggable_errors
+        return error_name not in self.__ignore_errors
 
     def log_last_error(self, request, response, obj=None, extra=None):
         """Build an error report and log the last available error.
         """
         error_type, error_value, traceback = sys.exc_info()
-        if ((not extra) and
-            (not response.debug_mode) and
+        if ((not response.debug_mode) and
             (not self.is_loggable(error_value))):
             return
 
