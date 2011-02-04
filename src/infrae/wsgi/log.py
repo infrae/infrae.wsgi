@@ -74,7 +74,7 @@ class ErrorReporter(object):
     """Utility to help error reporting.
     """
     all_ignored_errors = [
-            'NotFound', 'Redirect', 'Unauthorized', 'BrokenReferenceError']
+        'NotFound', 'Redirect', 'Unauthorized', 'Forbidden', 'BrokenReferenceError']
 
     def __init__(self):
         self.__last_errors = collections.deque([], 25)
