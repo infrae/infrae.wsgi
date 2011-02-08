@@ -127,6 +127,7 @@ class ErrorReporter(object):
 
         log_request_info('Request URL', 'URL')
         log_request_info('Request method', 'method')
+        log_request_info('Query string', 'QUERY_STRING')
         log_request_info('User', 'AUTHENTICATED_USER')
         log_request_info('User-agent', 'HTTP_USER_AGENT')
         log_request_info('Refer', 'HTTP_REFERER')
