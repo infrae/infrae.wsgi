@@ -74,7 +74,9 @@ class ErrorReporter(object):
     """Utility to help error reporting.
     """
     all_ignored_errors = [
-        'NotFound', 'Redirect', 'Unauthorized', 'Forbidden', 'BrokenReferenceError']
+        'NotFound', 'Redirect',
+        'Unauthorized', 'Forbidden',
+        'BadRequest', 'BrokenReferenceError']
 
     def __init__(self):
         self.__last_errors = collections.deque([], 25)
@@ -85,7 +87,8 @@ class ErrorReporter(object):
         def getter(self):
             return self.__ignore_errors
         def setter(self, value):
-            self.__ignore_errors = set(value).intersection(set(self.all_ignored_errors))
+            self.__ignore_errors = set(value).intersection(
+                set(self.all_ignored_errors))
         return property(getter, setter)
 
     def get_last_errors(self):
