@@ -87,6 +87,10 @@ class WSGIResult(object):
     def close(self):
         try:
             if not self.__iteration_done:
+                logger.error(
+                    "An error happened in the WSGI stack "
+                    "while iterating the result for the url '%s'" %
+                    reconstruct_url_from_environ(self.request.environ))
                 self.publisher.abort()
             else:
                 self.publisher.finish()

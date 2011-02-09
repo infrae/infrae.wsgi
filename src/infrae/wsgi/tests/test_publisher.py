@@ -40,8 +40,10 @@ def no_content_view():
 def bugous_view():
     raise ValueError("I am not happy")
 
+
 def invalid_view():
     return object()
+
 
 def not_found_view():
     raise zExceptions.NotFound("I am not here!")
@@ -345,34 +347,39 @@ class PublisherTestCase(unittest.TestCase):
         transaction is aborted and the request is closed.
         """
         request = self.new_request_for(bugous_result_view)
-        publication = WSGIPublication(self.app, request, self.response)
-        result = publication()
+        with LoggingTesting('infrae.wsgi') as logs:
+            publication = WSGIPublication(self.app, request, self.response)
+            result = publication()
 
-        self.assertEqual(
-            request.mocker_called(),
-            [('processInputs', (), {})])
-        self.assertEqual(
-            self.app.transaction.mocker_called(),
-            [('begin', (), {}),
-             ('recordMetaData', (bugous_result_view, request), {})])
-        self.assertEqual(
-            self.app.response.status, '200 OK')
-        self.assertEqual(
-            self.app.response.headers,
-            [('Content-Type', 'text/html;charset=utf-8')])
-        self.assertEqual(
-            get_event_names(),
-            ['PubStart', 'PubAfterTraversal', 'PubBeforeStreaming'])
+            self.assertEqual(
+                request.mocker_called(),
+                [('processInputs', (), {})])
+            self.assertEqual(
+                self.app.transaction.mocker_called(),
+                [('begin', (), {}),
+                 ('recordMetaData', (bugous_result_view, request), {})])
+            self.assertEqual(
+                self.app.response.status, '200 OK')
+            self.assertEqual(
+                self.app.response.headers,
+                [('Content-Type', 'text/html;charset=utf-8')])
+            self.assertEqual(
+                get_event_names(),
+                ['PubStart', 'PubAfterTraversal', 'PubBeforeStreaming'])
 
-        self.assertRaises(ValueError, consume_wsgi_result, result)
+            self.assertRaises(ValueError, consume_wsgi_result, result)
 
-        self.assertEqual(
-            request.mocker_called(),  [('close', (), {})])
-        self.assertEqual(
-            self.app.transaction.mocker_called(), [('abort', (), {})])
-        self.assertEqual(
-            get_event_names(),
-            ['TestNextCalled', 'PubBeforeAbort', 'PubFailure'])
+            self.assertEqual(
+                request.mocker_called(),  [('close', (), {})])
+            self.assertEqual(
+                self.app.transaction.mocker_called(), [('abort', (), {})])
+            self.assertEqual(
+                get_event_names(),
+                ['TestNextCalled', 'PubBeforeAbort', 'PubFailure'])
+
+            logs.assertContains(
+                "An error happened in the WSGI stack while iterating "
+                "the result for the url 'http://infrae.com/index.html'")
 
     def test_result_with_conflict_error(self):
         """Test a view that return an object of type IResult, and does
