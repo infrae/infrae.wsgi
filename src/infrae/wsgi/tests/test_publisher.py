@@ -2,7 +2,9 @@
 # See also LICENSE.txt
 # $Id$
 
+from cStringIO import StringIO
 import unittest
+import logging
 
 from zope.interface import implements
 from zope.publisher.interfaces.http import IResult
@@ -33,6 +35,8 @@ def no_content_view():
 def bugous_view():
     raise ValueError("I am not happy")
 
+def invalid_view():
+    return object()
 
 def not_found_view():
     raise zExceptions.NotFound("I am not here!")
@@ -135,6 +139,50 @@ def consume_wsgi_result(iterator):
     return result
 
 
+class LoggingTesting(object):
+
+    def __init__(self, name, level=logging.NOTSET):
+        self.name = name
+        self.level = level
+        self.__logged = StringIO()
+        self.__settings = {}
+        self.__handler = logging.StreamHandler(self.__logged)
+        self.__logger = logging.getLogger(name)
+        self.__settings['level'] = self.__logger.getEffectiveLevel()
+        self.__settings['propagate'] = self.__logger.propagate
+        self.__logger.propagate = False
+        self.__logger.setLevel(level)
+        self.__logger.addHandler(self.__handler)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.__logger.removeHandler(self.__handler)
+        self.__logger.setLevel(self.__settings['level'])
+        self.__logger.propagate = self.__settings['propagate']
+
+    def __get_logs(self):
+        self.__handler.flush()
+        return self.__logged.getvalue()
+
+    def assertEmpty(self, msg=None):
+        log = self.__get_logs()
+        if msg is None:
+            msg = 'Unexpected log entries in %s logger' % self.name
+        assert len(log) == 0, msg
+
+    def assertNotEmpty(self, msg=None):
+        log = self.__get_logs()
+        if msg is None:
+            msg = 'Missing expected log entries in %s logger' % self.name
+        assert len(log) != 0, msg
+
+    def assertEquals(self, lines):
+        log = self.__get_logs()
+        assert lines == map(lambda s: s.strip(), log.split('\n'))
+
+
 class PublisherTestCase(unittest.TestCase):
     """Test that the publisher triggers the correct actions at the
     correct time with the help of mockers.
@@ -162,70 +210,76 @@ class PublisherTestCase(unittest.TestCase):
         """Test a working view which says hello world.
         """
         request = self.new_request_for(hello_view)
-        publication = WSGIPublication(self.app, request, self.response)
-        result = publication()
+        with LoggingTesting('infrae.wsgi') as logs:
+            publication = WSGIPublication(self.app, request, self.response)
+            result = publication()
 
-        self.assertEqual(
-            request.mocker_called(),
-            [('processInputs', (), {})])
-        self.assertEqual(
-            self.app.transaction.mocker_called(),
-            [('begin', (), {}),
-             ('recordMetaData', (hello_view, request), {}),
-             ('commit', (), {})])
-        self.assertEqual(
-            self.app.response.status, '200 OK')
-        self.assertEqual(
-            self.app.response.headers,
-            [('Content-Length', '12'),
-             ('Content-Type', 'text/html;charset=utf-8')])
-        self.assertEqual(
-            get_event_names(),
-            ['PubStart', 'PubAfterTraversal', 'PubBeforeCommit', 'PubSuccess'])
+            self.assertEqual(
+                request.mocker_called(),
+                [('processInputs', (), {})])
+            self.assertEqual(
+                self.app.transaction.mocker_called(),
+                [('begin', (), {}),
+                 ('recordMetaData', (hello_view, request), {}),
+                 ('commit', (), {})])
+            self.assertEqual(
+                self.app.response.status, '200 OK')
+            self.assertEqual(
+                self.app.response.headers,
+                [('Content-Length', '12'),
+                 ('Content-Type', 'text/html;charset=utf-8')])
+            self.assertEqual(
+                get_event_names(),
+                ['PubStart', 'PubAfterTraversal', 'PubBeforeCommit', 'PubSuccess'])
 
-        body = consume_wsgi_result(result)
+            body = consume_wsgi_result(result)
 
-        self.assertEqual(body, 'Hello world!')
-        self.assertEqual(
-            request.mocker_called(),  [('close', (), {})])
-        self.assertEqual(
-            self.app.transaction.mocker_called(), [])
-        self.assertEqual(
-            get_event_names(), [])
+            self.assertEqual(body, 'Hello world!')
+            self.assertEqual(
+                request.mocker_called(),  [('close', (), {})])
+            self.assertEqual(
+                self.app.transaction.mocker_called(), [])
+            self.assertEqual(
+                get_event_names(), [])
+
+            logs.assertEmpty()
 
     def test_no_content(self):
         """Test a working view with no content.
         """
         request = self.new_request_for(no_content_view)
-        publication = WSGIPublication(self.app, request, self.response)
-        result = publication()
+        with LoggingTesting('infrae.wsgi') as logs:
+            publication = WSGIPublication(self.app, request, self.response)
+            result = publication()
 
-        self.assertEqual(
-            request.mocker_called(),
-            [('processInputs', (), {})])
-        self.assertEqual(
-            self.app.transaction.mocker_called(),
-            [('begin', (), {}),
-             ('recordMetaData', (no_content_view, request), {}),
-             ('commit', (), {})])
-        self.assertEqual(
-            self.app.response.status, '204 No Content')
-        self.assertEqual(
-            self.app.response.headers,
-            [('Content-Length', '0')])
-        self.assertEqual(
-            get_event_names(),
-            ['PubStart', 'PubAfterTraversal', 'PubBeforeCommit', 'PubSuccess'])
+            self.assertEqual(
+                request.mocker_called(),
+                [('processInputs', (), {})])
+            self.assertEqual(
+                self.app.transaction.mocker_called(),
+                [('begin', (), {}),
+                 ('recordMetaData', (no_content_view, request), {}),
+                 ('commit', (), {})])
+            self.assertEqual(
+                self.app.response.status, '204 No Content')
+            self.assertEqual(
+                self.app.response.headers,
+                [('Content-Length', '0')])
+            self.assertEqual(
+                get_event_names(),
+                ['PubStart', 'PubAfterTraversal', 'PubBeforeCommit', 'PubSuccess'])
 
-        body = consume_wsgi_result(result)
+            body = consume_wsgi_result(result)
 
-        self.assertEqual(body, '')
-        self.assertEqual(
-            request.mocker_called(),  [('close', (), {})])
-        self.assertEqual(
-            self.app.transaction.mocker_called(), [])
-        self.assertEqual(
-            get_event_names(), [])
+            self.assertEqual(body, '')
+            self.assertEqual(
+                request.mocker_called(),  [('close', (), {})])
+            self.assertEqual(
+                self.app.transaction.mocker_called(), [])
+            self.assertEqual(
+                get_event_names(), [])
+
+            logs.assertEmpty()
 
     def test_result(self):
         """Test a view that return an object of type IResult. Since it
@@ -459,36 +513,39 @@ class PublisherTestCase(unittest.TestCase):
         """Test a broken view.
         """
         request = self.new_request_for(bugous_view)
-        publication = WSGIPublication(self.app, request, self.response)
-        result = publication()
+        with LoggingTesting('infrae.wsgi') as logs:
+            publication = WSGIPublication(self.app, request, self.response)
+            result = publication()
 
-        self.assertEqual(
-            request.mocker_called(),
-            [('processInputs', (), {})])
-        self.assertEqual(
-            self.app.transaction.mocker_called(),
-            [('begin', (), {}),
-             ('recordMetaData', (bugous_view, request), {}),
-             ('abort', (), {})])
-        self.assertEqual(
-            self.app.response.status, '500 Internal Server Error')
-        self.assertEqual(
-           self.app.response.headers,
-           [('Content-Length', '150'),
-            ('Content-Type', 'text/html;charset=utf-8')])
-        self.assertEqual(
-            get_event_names(),
-            ['PubStart', 'PubAfterTraversal', 'PubBeforeAbort', 'PubFailure'])
+            self.assertEqual(
+                request.mocker_called(),
+                [('processInputs', (), {})])
+            self.assertEqual(
+                self.app.transaction.mocker_called(),
+                [('begin', (), {}),
+                 ('recordMetaData', (bugous_view, request), {}),
+                 ('abort', (), {})])
+            self.assertEqual(
+                self.app.response.status, '500 Internal Server Error')
+            self.assertEqual(
+               self.app.response.headers,
+               [('Content-Length', '150'),
+                ('Content-Type', 'text/html;charset=utf-8')])
+            self.assertEqual(
+                get_event_names(),
+                ['PubStart', 'PubAfterTraversal', 'PubBeforeAbort', 'PubFailure'])
 
-        body = consume_wsgi_result(result)
+            body = consume_wsgi_result(result)
 
-        self.failUnless('I am not happy' in body)
-        self.assertEqual(
-            request.mocker_called(),  [('close', (), {})])
-        self.assertEqual(
-            self.app.transaction.mocker_called(), [])
-        self.assertEqual(
-            get_event_names(), [])
+            self.failUnless('I am not happy' in body)
+            self.assertEqual(
+                request.mocker_called(),  [('close', (), {})])
+            self.assertEqual(
+                self.app.transaction.mocker_called(), [])
+            self.assertEqual(
+                get_event_names(), [])
+
+            logs.assertNotEmpty()
 
     def test_not_found(self):
         """Test a view which does a not found exception.

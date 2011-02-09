@@ -4,9 +4,10 @@
 
 from cgi import escape
 from datetime import datetime
-import sys
-import logging
+from urllib import quote
 import collections
+import logging
+import sys
 
 from zExceptions.ExceptionFormatter import format_exception
 from zope.browser.interfaces import IView
@@ -17,16 +18,56 @@ logger = logging.getLogger('infrae.wsgi')
 
 
 def object_name(obj):
+    """Return an object name
+    """
     return '%s.%s' % (obj.__class__.__module__, obj.__class__.__name__)
 
 
 def object_path(obj):
+    """Return an object path in the Zope database.
+    """
     try:
         if hasattr(obj, 'getPhysicalPath'):
             return '/'.join(obj.getPhysicalPath())
     except:
         pass
     return 'n/a'
+
+
+def reconstruct_url_from_environ(environ):
+    """Reconstruct an URL from the WSGI environ.
+    """
+    # This code is taken from the PEP333
+    url = environ['wsgi.url_scheme']+'://'
+
+    if environ.get('HTTP_HOST'):
+        url += environ['HTTP_HOST']
+    else:
+        url += environ['SERVER_NAME']
+
+        if environ['wsgi.url_scheme'] == 'https':
+            if environ['SERVER_PORT'] != '443':
+               url += ':' + environ['SERVER_PORT']
+        else:
+            if environ['SERVER_PORT'] != '80':
+               url += ':' + environ['SERVER_PORT']
+
+    url += quote(environ.get('SCRIPT_NAME', ''))
+    url += quote(environ.get('PATH_INFO', ''))
+    if environ.get('QUERY_STRING'):
+        url += '?' + environ['QUERY_STRING']
+    return url
+
+
+def log_invalid_response_data(data, environ):
+    """Log an invalid response type from application. Data sent must
+    always be a string (unicode strings are accepted), if it is not an
+    IResult or IStreamIterator object (those must behave correctly).
+    """
+    logger.error(
+        "Invalid response data of type %s from url %s, "
+        "trying to convert to str." %
+        (object_name(data), reconstruct_url_from_environ(environ)))
 
 
 class ErrorLogView(grok.View):

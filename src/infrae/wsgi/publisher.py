@@ -93,7 +93,8 @@ class WSGIResult(object):
             self.publisher.abort()
             raise
         finally:
-            # Always close the request, even if there errors while committing.
+            # Always close the request, even if there errors while
+            # committing.
             self.request.close()
 
 
@@ -284,7 +285,7 @@ class WSGIPublication(object):
         """
         try:
             data = self.publish()
-        except (ConflictError, Retry) as error:
+        except (ConflictError, Retry):
             self.abort()
             self.publication_done = True
             if self.request.supports_retry() and not self.data_sent:

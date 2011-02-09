@@ -2,6 +2,11 @@
 # See also LICENSE.txt
 # $Id$
 
+from cgi import escape
+from urllib import quote
+import socket
+import re
+
 from ZPublisher.HTTPResponse import status_reasons
 from ZPublisher.Iterators import IStreamIterator
 from ZPublisher.pubevents import PubBeforeStreaming
@@ -10,12 +15,7 @@ from zope.event import notify
 import zExceptions
 
 from infrae.wsgi.headers import HTTPHeaders
-
-from cgi import escape
-from urllib import quote
-import socket
-import re
-
+from infrae.wsgi.log import log_invalid_response_data
 
 HEAD_REGEXP = re.compile('(<head[^>]*>)', re.I)
 BASE_REGEXP = re.compile('(<base.*?>)',re.I)
@@ -107,6 +107,8 @@ class WSGIResponse(object):
         try:
             if isinstance(data, unicode):
                 data = data.encode(self.default_charset)
+            if not isinstance(data, str):
+                log_invalid_response_data(data, self.__environ)
             self.__write(data)
         except (socket.error, IOError):
             # If we can't write anymore to the socket, abort all the
@@ -125,7 +127,7 @@ class WSGIResponse(object):
         # needed. There is no way to get ride of that, several ZMI
         # screens rely on this (form using :method variables).
         content_type = self.headers.get('content-type', '').split(';')[0]
-        if content_type and (content_type != 'text/html'):
+        if content_type != 'text/html':
             return body
 
         if self.__base:
@@ -135,12 +137,14 @@ class WSGIResponse(object):
                     index = match.start(0) + len(match.group(0))
                     ibase = BASE_REGEXP.search(body)
                     if ibase is None:
-                        body = '%s\n<base href="%s" />\n%s' % (
-                            body[:index], escape(self.__base, 1), body[index:])
+                        return '%s\n<base href="%s" />\n%s' % (
+                            body[:index],
+                            escape(self.__base, 1),
+                            body[index:])
         return body
 
     def setBody(self, body, **options):
-        # We ignore options
+        # We ignore options, but do __insertBase if body is a string.
         if isinstance(body, basestring):
             body = self.__insertBase(body)
             if isinstance(body, unicode):
@@ -255,6 +259,8 @@ class WSGIResponse(object):
                 return (True, StreamIteratorIterator(result))
             elif IResult.providedBy(result):
                 return (True, result)
+            if not isinstance(result, str):
+                log_invalid_response_data(result, self.__environ)
             return (self.__started, [result,])
         return (self.__started, [])
 
