@@ -93,11 +93,11 @@ class MockApplication(ExtensionClass.Base):
 class MockRequest(Mocker):
     implements(IBrowserRequest)
 
-    def __init__(self, args=(), data=(), view=None, response=None, retry=0):
+    def __init__(self, args=(), data={}, view=None, response=None, retry=0):
         super(MockRequest, self).__init__()
         self.response = response
         self.args = args
-        self.environ = {}
+        self.environ = data.copy()
         self.other = {}
         self.__data = data
         self.__view = view

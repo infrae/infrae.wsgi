@@ -22,6 +22,11 @@ from infrae.wsgi.tests.mockers import (
     MockWSGIStartResponse, MockTransactionManager, MockRequest, MockApplication)
 
 
+DEFAULT_ENVIRON = {
+    'wsgi.url_scheme': 'http',
+    'HTTP_HOST': 'infrae.com',
+    'PATH_INFO': '/index.html'}
+
 # Some test views
 
 def hello_view():
@@ -178,9 +183,20 @@ class LoggingTesting(object):
             msg = 'Missing expected log entries in %s logger' % self.name
         assert len(log) != 0, msg
 
-    def assertEquals(self, lines):
-        log = self.__get_logs()
-        assert lines == map(lambda s: s.strip(), log.split('\n'))
+    def assertEqual(self, expected):
+        lines = filter(lambda s:s ,
+                       map(lambda s: s.strip(),
+                           self.__get_logs().split('\n')))
+        assert expected == lines, '%s != %s' % (lines, expected)
+
+    def assertContains(self, expected, msg=None):
+        lines = filter(lambda s:s ,
+                       map(lambda s: s.strip(),
+                           self.__get_logs().split('\n')))
+        if msg is None:
+            msg = '\nLogs:\n\n%s \n\ndoesn\'t contains:\n\n %s' % (
+                '\n'.join(lines), expected)
+        assert expected in lines, msg
 
 
 class PublisherTestCase(unittest.TestCase):
@@ -196,12 +212,14 @@ class PublisherTestCase(unittest.TestCase):
             response = MockWSGIStartResponse()
 
         self.app = WSGIApplication()
-        self.response = WSGIResponse({}, self.app.response)
+        self.response = WSGIResponse(DEFAULT_ENVIRON.copy(), self.app.response)
 
     def new_request_for(self, method):
         # Help to create a request that will be rendered by the given view.
+        data = DEFAULT_ENVIRON.copy()
+        data['URL'] = 'http://infrae.com/index.html'
         return MockRequest(
-            data={'PATH_INFO': '/', 'URL': 'http://infrae.com'},
+            data=data,
             view=method,
             response=self.response,
             retry=2)
@@ -287,36 +305,39 @@ class PublisherTestCase(unittest.TestCase):
         iterator has be consumed.
         """
         request = self.new_request_for(result_view)
-        publication = WSGIPublication(self.app, request, self.response)
-        result = publication()
+        with LoggingTesting('infrae.wsgi') as logs:
+            publication = WSGIPublication(self.app, request, self.response)
+            result = publication()
 
-        self.assertEqual(
-            request.mocker_called(),
-            [('processInputs', (), {})])
-        self.assertEqual(
-            self.app.transaction.mocker_called(),
-            [('begin', (), {}),
-             ('recordMetaData', (result_view, request), {})])
-        self.assertEqual(
-            self.app.response.status, '200 OK')
-        self.assertEqual(
-            self.app.response.headers,
-            [('Content-Type', 'text/html;charset=utf-8')])
-        self.assertEqual(
-            get_event_names(),
-            ['PubStart', 'PubAfterTraversal', 'PubBeforeStreaming'])
+            self.assertEqual(
+                request.mocker_called(),
+                [('processInputs', (), {})])
+            self.assertEqual(
+                self.app.transaction.mocker_called(),
+                [('begin', (), {}),
+                 ('recordMetaData', (result_view, request), {})])
+            self.assertEqual(
+                self.app.response.status, '200 OK')
+            self.assertEqual(
+                self.app.response.headers,
+                [('Content-Type', 'text/html;charset=utf-8')])
+            self.assertEqual(
+                get_event_names(),
+                ['PubStart', 'PubAfterTraversal', 'PubBeforeStreaming'])
 
-        body = consume_wsgi_result(result)
+            body = consume_wsgi_result(result)
 
-        self.assertEqual('Hello World', body)
-        self.assertEqual(
-            request.mocker_called(),  [('close', (), {})])
-        self.assertEqual(
-            self.app.transaction.mocker_called(), [('commit', (), {})])
-        self.assertEqual(
-            get_event_names(),
-            ['TestNextCalled', 'TestNextCalled', 'TestNextCalled',
-             'PubBeforeCommit', 'PubSuccess'])
+            self.assertEqual('Hello World', body)
+            self.assertEqual(
+                request.mocker_called(),  [('close', (), {})])
+            self.assertEqual(
+                self.app.transaction.mocker_called(), [('commit', (), {})])
+            self.assertEqual(
+                get_event_names(),
+                ['TestNextCalled', 'TestNextCalled', 'TestNextCalled',
+                 'PubBeforeCommit', 'PubSuccess'])
+
+            logs.assertEmpty()
 
     def test_bugous_result(self):
         """test a view that return an IResult object, and does an
@@ -547,6 +568,44 @@ class PublisherTestCase(unittest.TestCase):
 
             logs.assertNotEmpty()
 
+    def test_invalid_view(self):
+        """Test a view that doesn't return a string.
+        """
+        request = self.new_request_for(invalid_view)
+        with LoggingTesting('infrae.wsgi') as logs:
+            publication = WSGIPublication(self.app, request, self.response)
+            result = publication()
+
+            self.assertEqual(
+                request.mocker_called(),
+                [('processInputs', (), {})])
+            self.assertEqual(
+                self.app.transaction.mocker_called(),
+                [('begin', (), {}),
+                 ('recordMetaData', (invalid_view, request), {}),
+                 ('commit', (), {})])
+            self.assertEqual(
+                self.app.response.status, '200 OK')
+            self.assertEqual(
+               self.app.response.headers,
+               [])
+            self.assertEqual(
+                get_event_names(),
+                ['PubStart', 'PubAfterTraversal', 'PubBeforeCommit', 'PubSuccess'])
+
+            consume_wsgi_result(result)
+
+            self.assertEqual(
+                request.mocker_called(),  [('close', (), {})])
+            self.assertEqual(
+                self.app.transaction.mocker_called(), [])
+            self.assertEqual(
+                get_event_names(), [])
+
+            logs.assertEqual(
+                ["Invalid response data of type __builtin__.object "
+                 "for url 'http://infrae.com/index.html'"])
+
     def test_not_found(self):
         """Test a view which does a not found exception.
         """
@@ -653,36 +712,39 @@ class PublisherTestCase(unittest.TestCase):
         """Test than an error in a PAS unauthorized handler is contained.
         """
         request = self.new_request_for(unauthorized_view)
-        response = WSGIResponse({}, self.app.response)
-        response._unauthorized = bugous_view # Set the bugous handler
-        publication = WSGIPublication(self.app, request, response)
-        result = publication()
-        self.assertEqual(
-            request.mocker_called(),
-            [('processInputs', (), {})])
-        self.assertEqual(
-            self.app.transaction.mocker_called(),
-            [('begin', (), {}),
-             ('recordMetaData', (unauthorized_view, request), {}),
-             ('commit', (), {})])
-        self.assertEqual(self.app.response.status, '401 Unauthorized')
-        self.assertEqual(
-            self.app.response.headers,
-            [('Content-Length', '0'),
-             ('Www-Authenticate', 'basic realm="Zope"')])
-        self.assertEqual(
-            get_event_names(),
-            ['PubStart', 'PubAfterTraversal', 'PubBeforeCommit', 'PubSuccess'])
+        with LoggingTesting('infrae.wsgi') as logs:
+            response = WSGIResponse({}, self.app.response)
+            response._unauthorized = bugous_view # Set the bugous handler
+            publication = WSGIPublication(self.app, request, response)
+            result = publication()
+            self.assertEqual(
+                request.mocker_called(),
+                [('processInputs', (), {})])
+            self.assertEqual(
+                self.app.transaction.mocker_called(),
+                [('begin', (), {}),
+                 ('recordMetaData', (unauthorized_view, request), {}),
+                 ('commit', (), {})])
+            self.assertEqual(self.app.response.status, '401 Unauthorized')
+            self.assertEqual(
+                self.app.response.headers,
+                [('Content-Length', '0'),
+                 ('Www-Authenticate', 'basic realm="Zope"')])
+            self.assertEqual(
+                get_event_names(),
+                ['PubStart', 'PubAfterTraversal', 'PubBeforeCommit', 'PubSuccess'])
 
-        body = consume_wsgi_result(result)
+            body = consume_wsgi_result(result)
 
-        self.assertEqual(body, '')
-        self.assertEqual(
-            request.mocker_called(),  [('close', (), {})])
-        self.assertEqual(
-            self.app.transaction.mocker_called(), [])
-        self.assertEqual(
-            get_event_names(), [])
+            self.assertEqual(body, '')
+            self.assertEqual(
+                request.mocker_called(),  [('close', (), {})])
+            self.assertEqual(
+                self.app.transaction.mocker_called(), [])
+            self.assertEqual(
+                get_event_names(), [])
+
+            logs.assertContains('Error while processing the unauthorized PAS handler')
 
     def test_forbidden(self):
         """Test a view which raises the Forbidden exception.
@@ -724,37 +786,42 @@ class PublisherTestCase(unittest.TestCase):
         self.app.transaction.mocker_set_conflict(True)
 
         request = self.new_request_for(hello_view)
-        publication = WSGIPublication(self.app, request, self.response)
-        body = consume_wsgi_result(publication())
+        with LoggingTesting('infrae.wsgi') as logs:
 
-        self.assertEqual(
-            self.app.transaction.mocker_called(),
-            [('begin', (), {}),
-             ('recordMetaData', (hello_view, request), {}),
-             ('commit', (), {}),
-             ('abort', (), {}),
-             ('begin', (), {}),
-             ('recordMetaData', (hello_view, request), {}),
-             ('commit', (), {}),
-             ('abort', (), {}),
-             ('begin', (), {}),
-             ('recordMetaData', (hello_view, request), {}),
-             ('commit', (), {}),
-             ('abort', (), {})])
-        self.assertEqual(self.app.response.status, '503 Service Unavailable')
-        self.assertEqual(
-            self.app.response.headers,
-            [('Content-Length', '198'),
-             ('Content-Type', 'text/html;charset=utf-8')])
-        self.failUnless('Service temporarily unavailable' in body)
-        self.assertEqual(
-            get_event_names(),
-            ['PubStart', 'PubAfterTraversal',
-             'PubBeforeCommit', 'PubBeforeAbort', 'PubFailure',
-             'PubStart', 'PubAfterTraversal',
-             'PubBeforeCommit', 'PubBeforeAbort', 'PubFailure',
-             'PubStart', 'PubAfterTraversal',
-             'PubBeforeCommit', 'PubBeforeAbort', 'PubFailure',])
+            publication = WSGIPublication(self.app, request, self.response)
+            body = consume_wsgi_result(publication())
+
+            self.assertEqual(
+                self.app.transaction.mocker_called(),
+                [('begin', (), {}),
+                 ('recordMetaData', (hello_view, request), {}),
+                 ('commit', (), {}),
+                 ('abort', (), {}),
+                 ('begin', (), {}),
+                 ('recordMetaData', (hello_view, request), {}),
+                 ('commit', (), {}),
+                 ('abort', (), {}),
+                 ('begin', (), {}),
+                 ('recordMetaData', (hello_view, request), {}),
+                 ('commit', (), {}),
+                 ('abort', (), {})])
+            self.assertEqual(self.app.response.status, '503 Service Unavailable')
+            self.assertEqual(
+                self.app.response.headers,
+                [('Content-Length', '198'),
+                 ('Content-Type', 'text/html;charset=utf-8')])
+            self.failUnless('Service temporarily unavailable' in body)
+            self.assertEqual(
+                get_event_names(),
+                ['PubStart', 'PubAfterTraversal',
+                 'PubBeforeCommit', 'PubBeforeAbort', 'PubFailure',
+                 'PubStart', 'PubAfterTraversal',
+                 'PubBeforeCommit', 'PubBeforeAbort', 'PubFailure',
+                 'PubStart', 'PubAfterTraversal',
+                 'PubBeforeCommit', 'PubBeforeAbort', 'PubFailure',])
+
+            logs.assertContains(
+                'Conflict error for request http://infrae.com/index.html')
 
     def test_conflict_error_but_ok(self):
         """Test a view which works after triggering one conflict errors, itself.

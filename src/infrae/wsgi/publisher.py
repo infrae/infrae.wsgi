@@ -28,6 +28,7 @@ import zExceptions
 from infrae.wsgi.errors import DefaultError
 from infrae.wsgi.response import WSGIResponse, AbortPublication
 from infrae.wsgi.log import logger, log_last_error, ErrorSupplement
+from infrae.wsgi.log import reconstruct_url_from_environ
 
 CHUNK_SIZE = 1<<16              # 64K
 
@@ -187,7 +188,7 @@ class WSGIPublication(object):
             except Exception as error:
                 log_last_error(
                     self.request, self.response, obj=last_known_obj,
-                    extra=u"Error while rendering error message\n")
+                    extra=u"Error while rendering error message")
                 self.response.setStatus(500)
                 self.response.setBody(ERROR_WHILE_RENDERING_ERROR_TEMPLATE)
         else:
@@ -291,7 +292,7 @@ class WSGIPublication(object):
             if self.request.supports_retry() and not self.data_sent:
                 # If can still retry, and didn't send any data yet, do it.
                 logger.info('Conflict, retrying request %s' % (
-                        self.request['URL']))
+                        reconstruct_url_from_environ(self.request.environ)))
                 new_request = self.request.retry()
                 try:
                     new_publication = self.__class__(
@@ -303,7 +304,7 @@ class WSGIPublication(object):
             else:
                 # Otherwise, just render a plain error.
                 logger.error('Conflict error for request %s' % (
-                        self.request['URL']))
+                        reconstruct_url_from_environ(self.request.environ)))
                 self.response.setStatus(503)
                 self.response.setBody(RETRY_FAIL_ERROR_TEMPLATE)
                 data = self.result()

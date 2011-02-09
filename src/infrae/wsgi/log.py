@@ -65,8 +65,7 @@ def log_invalid_response_data(data, environ):
     IResult or IStreamIterator object (those must behave correctly).
     """
     logger.error(
-        "Invalid response data of type %s from url %s, "
-        "trying to convert to str." %
+        "Invalid response data of type %s for url '%s'" %
         (object_name(data), reconstruct_url_from_environ(environ)))
 
 
@@ -156,7 +155,7 @@ class ErrorReporter(object):
         log_entry = ['\n']
 
         if extra is not None:
-            log_entry.append(extra)
+            log_entry.append(extra + '\n')
 
         if obj is not None:
             log_entry.append('Object class: %s\n' % object_name(obj))
