@@ -347,7 +347,8 @@ class WSGIApplication(object):
         original_input = environ.get('wsgi.input')
 
         if original_input is not None:
-            length = int(environ.get('CONTENT_LENGTH', '0'))
+            environ_length = environ.get('CONTENT_LENGTH')
+            length = int(environ_length) if environ_length else 0
             if length > self.memory_maxsize:
                 new_input = environ['wsgi.input'] = TemporaryFile('w+b')
             else:
