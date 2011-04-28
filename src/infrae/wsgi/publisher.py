@@ -20,7 +20,8 @@ from zope.component import queryMultiAdapter
 from zope.event import notify
 from zope.interface import implements
 from zope.site.hooks import getSite
-from zope.publisher.interfaces.browser import IDefaultBrowserLayer
+from zope.publisher.interfaces.browser import (IDefaultBrowserLayer,
+                                               IBrowserPage)
 from zope.security.management import newInteraction, endInteraction
 import Zope2
 import zExceptions
@@ -174,6 +175,10 @@ class WSGIPublication(object):
     def error(self, error, last_known_obj):
         """Render and log an error.
         """
+        if IBrowserPage.providedBy(last_known_obj):
+            #of the last obj is a view, use it's context (which should be
+            # an IAcquirer)
+            last_known_obj = last_known_obj.context
         if not IAcquirer.providedBy(last_known_obj):
             last_known_site = getSite()
             if last_known_site is not None:
