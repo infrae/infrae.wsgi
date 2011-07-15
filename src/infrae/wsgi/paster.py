@@ -58,8 +58,14 @@ def mount_all_databases():
     root = connection.root()['Application']
     for path, name in config.dbtab.listMountPaths():
         if path != '/':
-            logger.info("Mount %s on %s" % (name, path))
-            root.unrestrictedTraverse(path)
+            try:
+                # Get the database.
+                # If it doesn't exist yet, it will be created.
+                config.dbtab.getDatabase(name=name)
+                root.unrestrictedTraverse(path)
+                logger.info("Mounted %s on %s" % (name, path))
+            except AttributeError:
+                pass
     connection.close()
 
 
