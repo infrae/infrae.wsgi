@@ -73,13 +73,15 @@ class WSGIResult(object):
         self.__next = iter(data).next
         self.request = request
         self.publisher = publisher
-        self.__iteration_done = False
+        self.__iteration_error = False
 
     def next(self):
         try:
             return self.__next()
         except StopIteration:
-            self.__iteration_done = True
+            raise
+        except Exception:
+            self.__iteration_error = True
             raise
 
     def __iter__(self):
@@ -87,7 +89,7 @@ class WSGIResult(object):
 
     def close(self):
         try:
-            if not self.__iteration_done:
+            if self.__iteration_error:
                 logger.error(
                     "An error happened in the WSGI stack "
                     "while iterating the result for the url '%s'" %
