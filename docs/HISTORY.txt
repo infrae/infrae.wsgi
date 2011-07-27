@@ -1,8 +1,15 @@
 Changes
 =======
 
-1.3dev1 (2011-07-07)
---------------------
+1.3 (2011-07-27)
+----------------
+
+- Improve logging.
+
+- BadRequest and Forbidden exceptions are now ignored by default in
+  the logs.
+
+- Fix a bug the original CONTENT_LENGTH header is empty.
 
 - When an error happens on an IBrowserPage, use the page's context
   when handling the error (to prevent falling back to the nearest Site)
