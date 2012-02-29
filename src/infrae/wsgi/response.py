@@ -151,6 +151,9 @@ class WSGIResponse(object):
                 body = body.encode(self.default_charset)
         self.body = body
 
+    def getBody(self):
+        return self.body
+
     def setStatus(self, status, msg=None):
         # We ignore msg and use our own.
         self.status = status

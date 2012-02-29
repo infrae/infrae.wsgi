@@ -4,7 +4,6 @@
 
 from cgi import escape
 from datetime import datetime
-from urllib import quote
 import collections
 import logging
 import sys
@@ -13,6 +12,8 @@ from zExceptions.ExceptionFormatter import format_exception
 from zope.browser.interfaces import IView
 from zope.interface import Interface
 from five import grok
+
+from infrae.wsgi.utils import reconstruct_url_from_environ
 
 logger = logging.getLogger('infrae.wsgi')
 
@@ -32,31 +33,6 @@ def object_path(obj):
     except:
         pass
     return 'n/a'
-
-
-def reconstruct_url_from_environ(environ):
-    """Reconstruct an URL from the WSGI environ.
-    """
-    # This code is taken from the PEP333
-    url = environ['wsgi.url_scheme']+'://'
-
-    if environ.get('HTTP_HOST'):
-        url += environ['HTTP_HOST']
-    else:
-        url += environ['SERVER_NAME']
-
-        if environ['wsgi.url_scheme'] == 'https':
-            if environ['SERVER_PORT'] != '443':
-               url += ':' + environ['SERVER_PORT']
-        else:
-            if environ['SERVER_PORT'] != '80':
-               url += ':' + environ['SERVER_PORT']
-
-    url += quote(environ.get('SCRIPT_NAME', ''))
-    url += quote(environ.get('PATH_INFO', ''))
-    if environ.get('QUERY_STRING'):
-        url += '?' + environ['QUERY_STRING']
-    return url
 
 
 def log_invalid_response_data(data, environ):

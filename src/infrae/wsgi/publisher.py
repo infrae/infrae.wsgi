@@ -2,45 +2,37 @@
 # See also LICENSE.txt
 # $Id$
 
-from urlparse import urlparse
 from tempfile import TemporaryFile
 from cStringIO import StringIO
 import socket
-import types
+from urllib import quote
 
 from AccessControl.SecurityManagement import noSecurityManager
 from Acquisition.interfaces import IAcquirer
+from ZPublisher.BaseRequest import exec_callables, RequestContainer
 from ZPublisher.Publish import Retry
 from ZPublisher.Request import Request
 from ZPublisher.mapply import mapply
 from ZPublisher.pubevents import PubStart, PubSuccess, PubFailure, \
     PubBeforeCommit, PubAfterTraversal, PubBeforeAbort
 from ZODB.POSException import ConflictError
-from zope.component import queryMultiAdapter
+from zope.component import queryMultiAdapter, getMultiAdapter
 from zope.event import notify
 from zope.interface import implements
 from zope.site.hooks import getSite
-from zope.publisher.interfaces.browser import (IDefaultBrowserLayer,
-                                               IBrowserPage)
+from zope.publisher.interfaces.browser import IBrowserPage
 from zope.security.management import newInteraction, endInteraction
 import Zope2
 import zExceptions
 
+from infrae.wsgi import interfaces
 from infrae.wsgi.errors import DefaultError
 from infrae.wsgi.response import WSGIResponse, AbortPublication
 from infrae.wsgi.log import logger, log_last_error, ErrorSupplement
-from infrae.wsgi.log import reconstruct_url_from_environ
+from infrae.wsgi.utils import reconstruct_url_from_environ
+from infrae.wsgi.utils import split_path_info
 
 CHUNK_SIZE = 1<<16              # 64K
-
-def set_virtual_host(request, virtual_host):
-    url = urlparse(virtual_host)
-    if ':' in url.netloc:
-        hostname, port = url.netloc.split(':', 1)
-        request.setServerURL(url.scheme, hostname, int(port))
-    else:
-        request.setServerURL(url.scheme, url.netloc)
-    request.setVirtualRoot(url.path.split('/'))
 
 
 def call_object(obj, args, request):
@@ -60,7 +52,19 @@ def dont_publish_class(klass, request):
 class WSGIRequest(Request):
     """A WSGIRequest have a default skin.
     """
-    implements(IDefaultBrowserLayer)
+    implements(interfaces.IRequest)
+
+    def __init__(self, *args, **kwargs):
+        Request.__init__(self, *args, **kwargs)
+        self.__plugins = {interfaces.IRequest.__identifier__: self}
+
+    def query_plugin(self, context, iface):
+        plugin = getMultiAdapter((context, self), iface)
+        self.__plugins[iface.__identifier__] = plugin
+        return plugin
+
+    def get_plugin(self, iface):
+        return self.__plugins.get(iface.__identifier__)
 
 
 class WSGIResult(object):
@@ -106,6 +110,13 @@ class WSGIResult(object):
             self.request.close()
 
 
+def safe_callback(publisher, func, *args, **kwargs):
+    try:
+        func(*args, **kwargs)
+    except Exception:
+        log_last_error(publisher.request, publisher.response)
+
+
 class WSGIPublication(object):
     """Publish a request through WSGI.
     """
@@ -116,12 +127,6 @@ class WSGIPublication(object):
         self.response = response
         self.data_sent = False
         self.publication_done = False
-
-    def __safe_callback(self, func, *args, **kwargs):
-        try:
-            func(*args, **kwargs)
-        except Exception:
-            log_last_error(self.request, self.response)
 
     def start(self):
         """Start the publication process.
@@ -135,18 +140,18 @@ class WSGIPublication(object):
     def commit(self):
         """Commit results of the publication.
         """
-        self.__safe_callback(notify, PubBeforeCommit(self.request))
+        safe_callback(self, notify, PubBeforeCommit(self.request))
         self.app.transaction.commit()
         endInteraction()
-        self.__safe_callback(notify, PubSuccess(self.request))
+        safe_callback(self, notify, PubSuccess(self.request))
 
     def abort(self):
         """Abort the current publication process.
         """
-        self.__safe_callback(notify, PubBeforeAbort(self.request, None, False))
+        safe_callback(self, notify, PubBeforeAbort(self.request, None, False))
         self.app.transaction.abort()
         endInteraction()
-        self.__safe_callback(notify, PubFailure(self.request, None, False))
+        safe_callback(self, notify, PubFailure(self.request, None, False))
 
     def finish(self):
         """End the publication process, by either committing the
@@ -207,56 +212,107 @@ class WSGIPublication(object):
             self.response.setStatus(500)
             self.response.setBody(DEFAULT_ERROR_TEMPLATE)
 
+    def get_application_root(self):
+        """Return a new Zope root for this request.
+        """
+        # This create the connection to the ZODB, wrap it in the
+        # request.  After this, request.close must always be called.
+        root = self.app.application.__bobo_traverse__(self.request)
+        return root.__of__(RequestContainer(REQUEST=self.request))
+
+    def get_path_and_method(self):
+        """Return the path and the method of this request.
+        """
+        request = self.request
+        path_info = request['PATH_INFO']
+
+        # Inspect path
+        path = list(reversed(split_path_info(path_info)))
+        request['ACTUAL_URL'] = request['URL'] + quote(path_info)
+        request['TraversalRequestNameStack'] = request.path = path
+        request['PARENTS'] = []
+
+        # Method
+        method = request.get('REQUEST_METHOD', 'GET').upper()
+        if method in ['GET', 'POST']:
+            # index_html is still the default method, only any object can
+            # override it by implementing its own __browser_default__ method
+            method = 'index_html'
+
+        if not path and not method:
+            raise zExceptions.BadRequest(request['URL'])
+
+        return method, path
+
     def publish(self):
         """Publish the request into the response.
         """
-        parents = None
-        published_content = None
+        self.start()
 
+        # First check for "cancel" redirect ZMI-o-hardcoded thing:
+        submit = self.request.get('SUBMIT', None)
+        if submit is not None:
+            if submit.strip().lower() == 'cancel':
+                cancel = self.request.get('CANCEL_ACTION','')
+                if cancel:
+                    raise zExceptions.Redirect(cancel)
+
+        # Get the path, method and root
+        method, path = self.get_path_and_method()
+        root = self.get_application_root()
+
+        # Do some optional virtual hosting
+        vhm = self.request.query_plugin(root, interfaces.IVirtualHosting)
+        root, method, path = vhm(method, path)
+
+        # Zope 2 style post traverser hooks
+        self.request._post_traverse = post_traverse = []
+
+        # Get object to publish/render
+        traverser = self.request.query_plugin(root, interfaces.ITraverser)
+        content = traverser(method, path)
+        __traceback_supplement__ = (ErrorSupplement, content)
+
+        # Zope 2 style post traverser hooks
+        del self.request._post_traverse
+
+        # Run authentication
+        authenticator = self.request.query_plugin(content, interfaces.IAuthenticator)
+        authenticator(Zope2.zpublisher_validated_hook)
+
+        # Run Zope 2 style post traversal hooks
+        if post_traverse:
+            result = exec_callables(post_traverse)
+            if result is not None:
+                content = result
+
+        notify(PubAfterTraversal(self.request))
+
+        # Render the content into the response
+        self.app.transaction.recordMetaData(content, self.request)
+        result = mapply(
+            content, self.request.args, self.request,
+            call_object, 1, missing_name, dont_publish_class,
+            self.request, bind=1)
+
+        if result is not None:
+            self.response.setBody(result)
+
+        return self.result()
+
+    def publish_and_manage_errors(self):
+        """Publish the request, manage errors.
+        """
         def last_content():
-            content = published_content
-            if content is None or isinstance(content, types.FunctionType):
-                return parents[0] if parents is not None else None
+            content = self.request.get('PUBLISHED')
+            if content is None:
+                parents = self.request.get('PARENTS')
+                if parents:
+                    return parents[0]
             return content
 
         try:
-            self.start()
-
-            # First check for "cancel" redirect ZMI-o-hardcoded thing:
-            submit = self.request.get('SUBMIT', None)
-            if submit is not None:
-                if submit.strip().lower() == 'cancel':
-                    cancel = self.request.get('CANCEL_ACTION','')
-                    if cancel:
-                        raise zExceptions.Redirect(cancel)
-
-            path = self.request.get('PATH_INFO')
-            self.request['PARENTS'] = parents = [self.app.application,]
-
-            # Get the virtual host story running
-            # This should be in request __init__ but it needs
-            # self.request['PARENTS'] to be set properly.
-            if 'HTTP_X_VHM_HOST' in self.request.environ:
-                set_virtual_host(
-                    self.request,
-                    self.request.environ['HTTP_X_VHM_HOST'])
-
-            # Get object to publish/render
-            published_content = self.request.traverse(
-                path, validated_hook=Zope2.zpublisher_validated_hook)
-            __traceback_supplement__ = (ErrorSupplement, published_content)
-
-            notify(PubAfterTraversal(self.request))
-
-            # Render the object into the response
-            self.app.transaction.recordMetaData(published_content, self.request)
-            result = mapply(published_content, self.request.args, self.request,
-                            call_object, 1,
-                            missing_name, dont_publish_class,
-                            self.request, bind=1)
-
-            if result is not None:
-                self.response.setBody(result)
+            return self.publish()
         except (ConflictError, Retry, AbortPublication):
             # Conflict are managed at an higher level
             raise
@@ -296,7 +352,7 @@ class WSGIPublication(object):
         fails.
         """
         try:
-            data = self.publish()
+            data = self.publish_and_manage_errors()
         except (ConflictError, Retry):
             self.abort()
             self.publication_done = True

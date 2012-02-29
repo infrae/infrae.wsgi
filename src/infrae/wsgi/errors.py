@@ -11,6 +11,7 @@ from zope.security.interfaces import IForbidden
 from AccessControl import ClassSecurityInfo
 from App.class_init import InitializeClass
 import Acquisition
+import zExceptions
 
 grok.layer(IBrowserRequest)
 
@@ -69,6 +70,19 @@ class Forbidden(grok.View):
     def render(self):
         return HTML_TEMPLATE % (
             self.__class__.__name__, str(self.context.error))
+
+
+class BadRequest(grok.View):
+    grok.name('error.html')
+    grok.context(zExceptions.BadRequest)
+
+    def update(self):
+        self.response.setStatus(400)
+
+    def render(self):
+        return HTML_TEMPLATE % (
+            self.__class__.__name__, 'Bad request: %s' %
+            str(self.context.error))
 
 
 class Error(grok.View):
