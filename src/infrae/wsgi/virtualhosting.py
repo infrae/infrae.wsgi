@@ -43,7 +43,7 @@ class VirtualHosting(grok.MultiAdapter):
     def __call__(self, method, path):
         root = self.context
         virtual_host = self.request.environ.get(
-            'HTTP_X_VHM_HOST')
+            'HTTP_X_VHM_URL')
         if virtual_host:
             url = urlparse.urlparse(virtual_host)
 
