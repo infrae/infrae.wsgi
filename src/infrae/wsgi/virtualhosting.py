@@ -20,11 +20,6 @@ class VirtualHosting(grok.MultiAdapter):
     grok.provides(IVirtualHosting)
     grok.implements(IVirtualHosting)
 
-    # Default virtual hosting headers.
-    HEADERS = ['HTTP_X_VHM_HOST',
-               'HTTP_X_FORWARDED_HOST',
-               'HTTP_X_FORWARDED_SERVER']
-
     def __init__(self, context, request):
         self.context = context
         self.request = request
@@ -36,28 +31,52 @@ class VirtualHosting(grok.MultiAdapter):
         for piece in path:
             child = content._getOb(piece, None)
             if not IObjectManager.providedBy(child):
-                raise zExceptions.NotFound(self.path)
+                raise zExceptions.BadRequest(
+                    u'Invalid virtual host path /%s.' % '/'.join(path))
             hook = getattr(child, '__before_publishing_traverse__', None)
             if hook is not None:
                 hook(child, self.request)
-            content = child.__of__(content)
+            content = child
+            self.request['PARENTS'].append(content)
         return content
 
     def __call__(self, method, path):
         root = self.context
-        for header in self.HEADERS:
-            virtual_host = self.request.environ.get(header)
-            if virtual_host:
-                url = urlparse.urlparse(virtual_host)
-                if ':' in url.netloc:
-                    hostname, port = url.netloc.split(':', 1)
-                    self.request.setServerURL(url.scheme, hostname, int(port))
-                else:
-                    self.request.setServerURL(url.scheme, url.netloc)
-                path = split_path_info(url.path)
-                if path:
-                    root = self.traverse(path)
-                    self.request.setVirtualRoot(path)
-                break
+        virtual_host = self.request.environ.get(
+            'HTTP_X_VHM_HOST')
+        if virtual_host:
+            url = urlparse.urlparse(virtual_host)
+
+            # Step 1. Set Server Name
+            hostname = url.netloc
+            if ':' in hostname:
+                hostname, port = url.netloc.split(':', 1)
+            else:
+                port = '80'
+                if url.scheme == 'https':
+                    port = '443'
+            self.request.setServerURL(url.scheme, hostname, port)
+
+            # Step 2. Consume extra path
+            host_path = split_path_info(url.path)
+            if host_path:
+                for piece in host_path:
+                    if path:
+                        taken_piece = path.pop()
+                        if taken_piece == piece:
+                            continue
+                    raise zExceptions.BadRequest(
+                        u'This URL is not in the virtual host.')
+
+            # Step 3. Traverse to the virtual root
+            virtual_path = split_path_info(
+                self.request.environ.get(
+                    'HTTP_X_VHM_PATH'))
+            if virtual_path:
+                root = self.traverse(virtual_path)
+
+            # Step 4, in case of path manipulation, set virtual root
+            if virtual_path or host_path:
+                self.request.setVirtualRoot(host_path)
 
         return root, method, path

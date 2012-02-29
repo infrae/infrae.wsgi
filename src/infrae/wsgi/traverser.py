@@ -39,16 +39,13 @@ class Traverser(grok.MultiAdapter):
     def __call__(self, method, path):
         request = self.request
         content = self.context
-        url = request['URL']
         parents = request['PARENTS']
         request['TraversalRequestNameStack'] = path
         # Steps records the traversed path (used for some URL computation)
         steps = request.steps
         _steps = request._steps = map(quote, steps)
-
-        # Add the root to parents.
-        parents.append(content)
         entry_name = ''
+
         try:
             # We build parents in the wrong order, so we
             # need to make sure we reverse it when we're done.
@@ -91,12 +88,13 @@ class Traverser(grok.MultiAdapter):
 
                 step = quote(entry_name)
                 _steps.append(step)
-                url = request['URL'] = '%s/%s' % (request['URL'], step)
+                steps.append(entry_name)
+                request['URL'] = '/'.join((request['URL'], step))
 
                 try:
                     next_content = request.traverseName(content, entry_name)
                 except (KeyError, AttributeError):
-                    raise zExceptions.NotFound(url)
+                    raise zExceptions.NotFound(request['URL'])
 
                 if (hasattr(content, '__bobo_traverse__') or
                     hasattr(content, entry_name)):
@@ -108,7 +106,6 @@ class Traverser(grok.MultiAdapter):
                 content = next_content
 
                 parents.append(content)
-                steps.append(entry_name)
         finally:
             parents.reverse()
 
@@ -116,6 +113,7 @@ class Traverser(grok.MultiAdapter):
         # than the URL, and a base tag must be hacked in the body
         # response.
         if request._hacked_path:
+            url = request['URL']
             index = url.rfind('/')
             if index > 0:
                 request.response.setBase(url[:index])

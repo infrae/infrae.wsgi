@@ -38,6 +38,8 @@ def split_path_info(path):
     what is useless.
     """
     result = []
+    if not path:
+        return result
     for item in path.split('/'):
         if item in ('REQUEST', 'aq_self', 'aq_base'):
             raise BadRequest(path)

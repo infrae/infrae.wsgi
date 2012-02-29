@@ -220,7 +220,7 @@ class WSGIPublication(object):
         root = self.app.application.__bobo_traverse__(self.request)
         return root.__of__(RequestContainer(REQUEST=self.request))
 
-    def get_path_and_method(self):
+    def get_path_and_method(self, root):
         """Return the path and the method of this request.
         """
         request = self.request
@@ -230,7 +230,7 @@ class WSGIPublication(object):
         path = list(reversed(split_path_info(path_info)))
         request['ACTUAL_URL'] = request['URL'] + quote(path_info)
         request['TraversalRequestNameStack'] = request.path = path
-        request['PARENTS'] = []
+        request['PARENTS'] = [root]
 
         # Method
         method = request.get('REQUEST_METHOD', 'GET').upper()
@@ -258,8 +258,8 @@ class WSGIPublication(object):
                     raise zExceptions.Redirect(cancel)
 
         # Get the path, method and root
-        method, path = self.get_path_and_method()
         root = self.get_application_root()
+        method, path = self.get_path_and_method(root)
 
         # Do some optional virtual hosting
         vhm = self.request.query_plugin(root, interfaces.IVirtualHosting)

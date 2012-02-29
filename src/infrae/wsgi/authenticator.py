@@ -54,7 +54,7 @@ class ZopeAuthenticator(grok.MultiAdapter):
         if user is None:
             # Not authenticated
             if self.request.roles != UNSPECIFIED_ROLES:
-                raise Unauthorized()
+                raise Unauthorized('Please authenticate')
         else:
             # Authenticated
             if validated_hook is not None:
