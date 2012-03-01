@@ -8,11 +8,10 @@ import urlparse
 from five import grok
 from zope.interface import Interface
 
-from OFS.interfaces import IObjectManager
 import zExceptions
 
 from infrae.wsgi.interfaces import IRequest, IVirtualHosting
-from infrae.wsgi.utils import split_path_info
+from infrae.wsgi.utils import split_path_info, traverse
 
 
 class VirtualHosting(grok.MultiAdapter):
@@ -23,22 +22,6 @@ class VirtualHosting(grok.MultiAdapter):
     def __init__(self, context, request):
         self.context = context
         self.request = request
-
-    def traverse(self, path):
-        """Traverse to the root object at  path.
-        """
-        content = self.context
-        for piece in path:
-            child = content._getOb(piece, None)
-            if not IObjectManager.providedBy(child):
-                raise zExceptions.BadRequest(
-                    u'Invalid virtual host path /%s.' % '/'.join(path))
-            hook = getattr(child, '__before_publishing_traverse__', None)
-            if hook is not None:
-                hook(child, self.request)
-            content = child
-            self.request['PARENTS'].append(content)
-        return content
 
     def __call__(self, method, path):
         root = self.context
@@ -73,7 +56,7 @@ class VirtualHosting(grok.MultiAdapter):
                 self.request.environ.get(
                     'HTTP_X_VHM_PATH'))
             if virtual_path:
-                root = self.traverse(virtual_path)
+                root = traverse(virtual_path, self.context, self.request)
 
             # Step 4, in case of path manipulation, set virtual root
             if virtual_path or host_path:
