@@ -4,16 +4,27 @@
 # $Id$
 
 from five import grok
+from zope.component import queryMultiAdapter
 from zope.interface import Interface
+from zope.publisher.interfaces import NotFound
+from zope.publisher.interfaces.browser import IBrowserPublisher
 
 from AccessControl.ZopeSecurityPolicy import getRoles
 from ZPublisher.BaseRequest import UNSPECIFIED_ROLES, DefaultPublishTraverse
 from ZPublisher.BaseRequest import quote
-from zope.publisher.interfaces.browser import IBrowserPublisher
-from zope.component import queryMultiAdapter
+from OFS.interfaces import IFolder
 import zExceptions
 
 from infrae.wsgi.interfaces import IRequest, ITraverser
+
+
+class FolderTraverser(DefaultPublishTraverse, grok.MultiAdapter):
+    """The default Zope 3 folder traverser is register in Zope
+    2.13.13. We register the Zope 2 one for Zope 2 folder, to prevent
+    a broken ZMI.
+    """
+    grok.adapts(IFolder, IRequest)
+    grok.provides(IBrowserPublisher)
 
 
 def query_adapter(content, request, iface):
@@ -62,10 +73,12 @@ class Traverser(grok.MultiAdapter):
                     # End of path, look for a view using IBrowserPublisher
 
                     next_content, default_path = query_adapter(
-                        content, request, IBrowserPublisher).browserDefault(request)
+                        content, request, IBrowserPublisher).browserDefault(
+                        request)
 
                     if next_content is not content:
-                        self.roles = getRoles(content, None, next_content, self.roles)
+                        self.roles = getRoles(
+                            content, None, next_content, self.roles)
                         content = next_content
 
                     if default_path:
@@ -93,7 +106,7 @@ class Traverser(grok.MultiAdapter):
 
                 try:
                     next_content = request.traverseName(content, entry_name)
-                except (KeyError, AttributeError):
+                except (KeyError, AttributeError, NotFound):
                     raise zExceptions.NotFound(request['URL'])
 
                 if (hasattr(content, '__bobo_traverse__') or
@@ -102,7 +115,8 @@ class Traverser(grok.MultiAdapter):
                 else:
                     check_name = None
 
-                self.roles = getRoles(content, check_name, next_content, self.roles)
+                self.roles = getRoles(
+                    content, check_name, next_content, self.roles)
                 content = next_content
 
                 parents.append(content)
@@ -119,12 +133,15 @@ class Traverser(grok.MultiAdapter):
                 request.response.setBase(url[:index])
 
 
-        # content is PUBLISHED, or the first in parents (since it have been reversed).
+        # content is PUBLISHED, or the first in parents (since it have
+        # been reversed).
         request['PUBLISHED'] = parents.pop(0)
 
-        # If content as a call method, get the roles defined on it, it will be called.
+        # If content as a call method, get the roles defined on it, it
+        # will be called.
         if hasattr(content, '__call__'):
-            self.roles = getRoles(content, '__call__', content.__call__, self.roles)
+            self.roles = getRoles(
+                content, '__call__', content.__call__, self.roles)
         request.roles = self.roles
 
         return content

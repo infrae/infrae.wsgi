@@ -279,6 +279,7 @@ class WSGIResponse(object):
         raise zExceptions.Unauthorized("Please authenticate")
 
     def debugError(self, name):
+        import pdb; pdb.set_trace()
         raise zExceptions.NotFound(name)
 
     def forbiddenError(self, name):
