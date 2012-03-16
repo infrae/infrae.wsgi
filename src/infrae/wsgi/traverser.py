@@ -18,7 +18,7 @@ import zExceptions
 from infrae.wsgi.interfaces import IRequest, ITraverser
 
 
-class FolderTraverser(DefaultPublishTraverse, grok.MultiAdapter):
+class FolderPublishTraverse(DefaultPublishTraverse, grok.MultiAdapter):
     """The default Zope 3 folder traverser is register in Zope
     2.13.13. We register the Zope 2 one for Zope 2 folder, to prevent
     a broken ZMI.
