@@ -12,18 +12,18 @@ from zope.publisher.interfaces.browser import IBrowserPublisher
 from AccessControl.ZopeSecurityPolicy import getRoles
 from ZPublisher.BaseRequest import UNSPECIFIED_ROLES, DefaultPublishTraverse
 from ZPublisher.BaseRequest import quote
-from OFS.interfaces import IFolder
+from OFS.interfaces import IObjectManager
 import zExceptions
 
 from infrae.wsgi.interfaces import IRequest, ITraverser
 
 
-class FolderPublishTraverse(DefaultPublishTraverse, grok.MultiAdapter):
+class ObjectManagerPublishTraverse(DefaultPublishTraverse, grok.MultiAdapter):
     """The default Zope 3 folder traverser is register in Zope
     2.13.13. We register the Zope 2 one for Zope 2 folder, to prevent
     a broken ZMI.
     """
-    grok.adapts(IFolder, IRequest)
+    grok.adapts(IObjectManager, IRequest)
     grok.provides(IBrowserPublisher)
 
 
