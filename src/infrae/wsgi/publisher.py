@@ -211,6 +211,10 @@ class WSGIPublication(object):
                 error_result = error_page()
                 if error_result is not None:
                     self.response.setBody(error_result)
+
+                notify(interfaces.PublicationAfterRender(
+                        self.request, error_page))
+
             except Exception as error:
                 log_last_error(
                     self.request, self.response, obj=last_known_obj,
