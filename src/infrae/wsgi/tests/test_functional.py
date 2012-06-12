@@ -8,10 +8,17 @@ import infrae.wsgi
 from infrae.wsgi.testing import BrowserLayer, Browser
 
 
+class InfraeWSGILayer(BrowserLayer):
+    default_users = {'admin': ['Manager']}
+
+
+FunctionalLayer = InfraeWSGILayer(infrae.wsgi)
+
+
 class FunctionalTestCase(unittest.TestCase):
     """Functional testing.
     """
-    layer = BrowserLayer(infrae.wsgi)
+    layer = FunctionalLayer
 
     def setUp(self):
         self.browser = Browser()
@@ -26,6 +33,22 @@ class FunctionalTestCase(unittest.TestCase):
     def test_notfound(self):
         self.browser.open('http://localhost/nowhere')
         self.assertEqual(self.browser.status, '404 Not Found')
+
+    def test_debug_view(self):
+        # You must be authenticated to access the debug view.
+        self.browser.open('http://localhost/debugzope.html')
+        self.assertEqual(self.browser.status, '401 Unauthorized')
+        self.browser.addHeader('Authorization', 'Basic admin:admin')
+        self.browser.reload()
+        self.assertEqual(self.browser.status, '200 OK')
+
+    def test_log_view(self):
+        # You must be authenticated to access the log view.
+        self.browser.open('http://localhost/errorlog.html')
+        self.assertEqual(self.browser.status, '401 Unauthorized')
+        self.browser.addHeader('Authorization', 'Basic admin:admin')
+        self.browser.reload()
+        self.assertEqual(self.browser.status, '200 OK')
 
 
 def test_suite():

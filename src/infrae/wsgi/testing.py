@@ -22,7 +22,6 @@ TEST_HOSTS = ['localhost', '127.0.0.1']
 
 
 class InterceptBrowser(BaseInterceptBrowser):
-
     default_schemes = ['http']
     default_others = ['_http_error', '_http_default_error']
     default_features = ['_redirect', '_cookies', '_referer', '_refresh',
@@ -268,3 +267,4 @@ def http(string, handle_errors=False, headers=None, parsed=False,
     if parsed:
         return ResponseParser(response)
     return response
+
