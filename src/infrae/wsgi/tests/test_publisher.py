@@ -250,7 +250,11 @@ class PublisherTestCase(unittest.TestCase):
                  ('Content-Type', 'text/html;charset=utf-8')])
             self.assertEqual(
                 get_event_names(),
-                ['PubStart', 'PubAfterTraversal', 'PubBeforeCommit', 'PubSuccess'])
+                ['PublicationStart',
+                 'PublicationAfterTraversal',
+                 'PublicationAfterRender',
+                 'PublicationBeforeCommit',
+                 'PublicationSuccess'])
 
             body = consume_wsgi_result(result)
 
@@ -287,7 +291,11 @@ class PublisherTestCase(unittest.TestCase):
                 [('Content-Length', '0')])
             self.assertEqual(
                 get_event_names(),
-                ['PubStart', 'PubAfterTraversal', 'PubBeforeCommit', 'PubSuccess'])
+                ['PublicationStart',
+                 'PublicationAfterTraversal',
+                 'PublicationAfterRender',
+                 'PublicationBeforeCommit',
+                 'PublicationSuccess'])
 
             body = consume_wsgi_result(result)
 
@@ -325,7 +333,10 @@ class PublisherTestCase(unittest.TestCase):
                 [('Content-Type', 'text/html;charset=utf-8')])
             self.assertEqual(
                 get_event_names(),
-                ['PubStart', 'PubAfterTraversal', 'PubBeforeStreaming'])
+                ['PublicationStart',
+                 'PublicationAfterTraversal',
+                 'PublicationAfterRender',
+                 'PublicationBeforeStreaming'])
 
             body = consume_wsgi_result(result)
 
@@ -336,8 +347,11 @@ class PublisherTestCase(unittest.TestCase):
                 self.app.transaction.mocker_called(), [('commit', (), {})])
             self.assertEqual(
                 get_event_names(),
-                ['TestNextCalled', 'TestNextCalled', 'TestNextCalled',
-                 'PubBeforeCommit', 'PubSuccess'])
+                ['TestNextCalled',
+                 'TestNextCalled',
+                 'TestNextCalled',
+                 'PublicationBeforeCommit',
+                 'PublicationSuccess'])
 
             logs.assertEmpty()
 
@@ -365,7 +379,10 @@ class PublisherTestCase(unittest.TestCase):
                 [('Content-Type', 'text/html;charset=utf-8')])
             self.assertEqual(
                 get_event_names(),
-                ['PubStart', 'PubAfterTraversal', 'PubBeforeStreaming'])
+                ['PublicationStart',
+                 'PublicationAfterTraversal',
+                 'PublicationAfterRender',
+                 'PublicationBeforeStreaming'])
 
             self.assertRaises(ValueError, consume_wsgi_result, result)
 
@@ -375,7 +392,9 @@ class PublisherTestCase(unittest.TestCase):
                 self.app.transaction.mocker_called(), [('abort', (), {})])
             self.assertEqual(
                 get_event_names(),
-                ['TestNextCalled', 'PubBeforeAbort', 'PubFailure'])
+                ['TestNextCalled',
+                 'PublicationBeforeAbort',
+                 'PublicationFailure'])
 
             logs.assertContains(
                 "An error happened in the WSGI stack while iterating "
@@ -407,7 +426,10 @@ class PublisherTestCase(unittest.TestCase):
             [('Content-Type', 'text/html;charset=utf-8')])
         self.assertEqual(
             get_event_names(),
-            ['PubStart', 'PubAfterTraversal', 'PubBeforeStreaming'])
+            ['PublicationStart',
+             'PublicationAfterTraversal',
+             'PublicationAfterRender',
+             'PublicationBeforeStreaming'])
 
         self.assertRaises(ConflictError, consume_wsgi_result, result)
 
@@ -418,8 +440,12 @@ class PublisherTestCase(unittest.TestCase):
             [('commit', (), {}),  ('abort', (), {})])
         self.assertEqual(
             get_event_names(),
-            ['TestNextCalled', 'TestNextCalled', 'TestNextCalled',
-             'PubBeforeCommit', 'PubBeforeAbort', 'PubFailure'])
+            ['TestNextCalled',
+             'TestNextCalled',
+             'TestNextCalled',
+             'PublicationBeforeCommit',
+             'PublicationBeforeAbort',
+             'PublicationFailure'])
 
     def test_streamiterator(self):
         """Test a view that return an object of type
@@ -446,7 +472,9 @@ class PublisherTestCase(unittest.TestCase):
              ('Content-Type', 'text/html;charset=utf-8')])
         self.assertEqual(
             get_event_names(),
-            ['PubStart', 'PubAfterTraversal'])
+            ['PublicationStart',
+             'PublicationAfterTraversal',
+             'PublicationAfterRender'])
 
         body = consume_wsgi_result(result)
 
@@ -457,8 +485,11 @@ class PublisherTestCase(unittest.TestCase):
             self.app.transaction.mocker_called(), [('commit', (), {})])
         self.assertEqual(
             get_event_names(),
-            ['TestNextCalled', 'TestNextCalled', 'TestNextCalled',
-             'PubBeforeCommit', 'PubSuccess'])
+            ['TestNextCalled',
+             'TestNextCalled',
+             'TestNextCalled',
+             'PublicationBeforeCommit',
+             'PublicationSuccess'])
 
     def test_bugous_streamiterator(self):
         """Test a view that return an object of type IStreamIterator,
@@ -484,7 +515,9 @@ class PublisherTestCase(unittest.TestCase):
              ('Content-Type', 'text/html;charset=utf-8')])
         self.assertEqual(
             get_event_names(),
-            ['PubStart', 'PubAfterTraversal'])
+            ['PublicationStart',
+             'PublicationAfterTraversal',
+             'PublicationAfterRender'])
 
         self.assertRaises(ValueError, consume_wsgi_result, result)
 
@@ -494,7 +527,9 @@ class PublisherTestCase(unittest.TestCase):
             self.app.transaction.mocker_called(), [('abort', (), {})])
         self.assertEqual(
             get_event_names(),
-            ['TestNextCalled', 'PubBeforeAbort', 'PubFailure'])
+            ['TestNextCalled',
+             'PublicationBeforeAbort',
+             'PublicationFailure'])
 
     def test_streamiterator_with_conflict_error(self):
         """Test a view that return an object of type IStreamIterator,
@@ -523,7 +558,9 @@ class PublisherTestCase(unittest.TestCase):
              ('Content-Type', 'text/html;charset=utf-8')])
         self.assertEqual(
             get_event_names(),
-            ['PubStart', 'PubAfterTraversal'])
+            ['PublicationStart',
+             'PublicationAfterTraversal',
+             'PublicationAfterRender'])
 
         self.assertRaises(ConflictError, consume_wsgi_result, result)
 
@@ -534,8 +571,12 @@ class PublisherTestCase(unittest.TestCase):
             [('commit', (), {}), ('abort', (), {})])
         self.assertEqual(
             get_event_names(),
-            ['TestNextCalled', 'TestNextCalled', 'TestNextCalled',
-             'PubBeforeCommit', 'PubBeforeAbort', 'PubFailure'])
+            ['TestNextCalled',
+             'TestNextCalled',
+             'TestNextCalled',
+             'PublicationBeforeCommit',
+             'PublicationBeforeAbort',
+             'PublicationFailure'])
 
     def test_bugous_view(self):
         """Test a broken view.
@@ -561,7 +602,10 @@ class PublisherTestCase(unittest.TestCase):
                 ('Content-Type', 'text/html;charset=utf-8')])
             self.assertEqual(
                 get_event_names(),
-                ['PubStart', 'PubAfterTraversal', 'PubBeforeAbort', 'PubFailure'])
+                ['PublicationStart',
+                 'PublicationAfterTraversal',
+                 'PublicationBeforeAbort',
+                 'PublicationFailure'])
 
             body = consume_wsgi_result(result)
 
@@ -598,7 +642,11 @@ class PublisherTestCase(unittest.TestCase):
                [])
             self.assertEqual(
                 get_event_names(),
-                ['PubStart', 'PubAfterTraversal', 'PubBeforeCommit', 'PubSuccess'])
+                ['PublicationStart',
+                 'PublicationAfterTraversal',
+                 'PublicationAfterRender',
+                 'PublicationBeforeCommit',
+                 'PublicationSuccess'])
 
             consume_wsgi_result(result)
 
@@ -635,7 +683,10 @@ class PublisherTestCase(unittest.TestCase):
              ('Content-Type', 'text/html;charset=utf-8')])
         self.assertEqual(
             get_event_names(),
-            ['PubStart', 'PubAfterTraversal', 'PubBeforeAbort', 'PubFailure'])
+            ['PublicationStart',
+             'PublicationAfterTraversal',
+             'PublicationBeforeAbort',
+             'PublicationFailure'])
 
         body = consume_wsgi_result(result)
 
@@ -669,7 +720,10 @@ class PublisherTestCase(unittest.TestCase):
              ('Location', 'http://infrae.com/products/silva')])
         self.assertEqual(
             get_event_names(),
-            ['PubStart', 'PubAfterTraversal', 'PubBeforeCommit', 'PubSuccess'])
+            ['PublicationStart',
+             'PublicationAfterTraversal',
+             'PublicationBeforeCommit',
+             'PublicationSuccess'])
 
         body = consume_wsgi_result(result)
 
@@ -703,7 +757,10 @@ class PublisherTestCase(unittest.TestCase):
              ('Www-Authenticate', 'basic realm="Zope"')])
         self.assertEqual(
             get_event_names(),
-            ['PubStart', 'PubAfterTraversal', 'PubBeforeCommit', 'PubSuccess'])
+            ['PublicationStart',
+             'PublicationAfterTraversal',
+             'PublicationBeforeCommit',
+             'PublicationSuccess'])
 
         body = consume_wsgi_result(result)
 
@@ -739,7 +796,10 @@ class PublisherTestCase(unittest.TestCase):
                  ('Www-Authenticate', 'basic realm="Zope"')])
             self.assertEqual(
                 get_event_names(),
-                ['PubStart', 'PubAfterTraversal', 'PubBeforeCommit', 'PubSuccess'])
+                ['PublicationStart',
+                 'PublicationAfterTraversal',
+                 'PublicationBeforeCommit',
+                 'PublicationSuccess'])
 
             body = consume_wsgi_result(result)
 
@@ -751,7 +811,8 @@ class PublisherTestCase(unittest.TestCase):
             self.assertEqual(
                 get_event_names(), [])
 
-            logs.assertContains('Error while processing the unauthorized PAS handler')
+            logs.assertContains(
+                'Error while processing the unauthorized PAS handler')
 
     def test_forbidden(self):
         """Test a view which raises the Forbidden exception.
@@ -775,7 +836,10 @@ class PublisherTestCase(unittest.TestCase):
              ('Content-Type', 'text/html;charset=utf-8')])
         self.assertEqual(
             get_event_names(),
-            ['PubStart', 'PubAfterTraversal', 'PubBeforeCommit', 'PubSuccess'])
+            ['PublicationStart',
+             'PublicationAfterTraversal',
+             'PublicationBeforeCommit',
+             'PublicationSuccess'])
 
         body = consume_wsgi_result(result)
 
@@ -820,17 +884,72 @@ class PublisherTestCase(unittest.TestCase):
             self.failUnless('Service temporarily unavailable' in body)
             self.assertEqual(
                 get_event_names(),
-                ['PubStart', 'PubAfterTraversal',
-                 'PubBeforeCommit', 'PubBeforeAbort', 'PubFailure',
-                 'PubStart', 'PubAfterTraversal',
-                 'PubBeforeCommit', 'PubBeforeAbort', 'PubFailure',
-                 'PubStart', 'PubAfterTraversal',
-                 'PubBeforeCommit', 'PubBeforeAbort', 'PubFailure',])
+                ['PublicationStart',
+                 'PublicationAfterTraversal',
+                 'PublicationAfterRender',
+                 'PublicationBeforeCommit',
+                 'PublicationBeforeAbort',
+                 'PublicationFailure',
+                 'PublicationStart',
+                 'PublicationAfterTraversal',
+                 'PublicationAfterRender',
+                 'PublicationBeforeCommit',
+                 'PublicationBeforeAbort',
+                 'PublicationFailure',
+                 'PublicationStart',
+                 'PublicationAfterTraversal',
+                 'PublicationAfterRender',
+                 'PublicationBeforeCommit',
+                 'PublicationBeforeAbort',
+                 'PublicationFailure',])
 
             logs.assertContains(
                 'Conflict error for request http://infrae.com/index.html')
 
-    def test_conflict_error_but_ok(self):
+    def test_conflict_errors_but_ok(self):
+        """Test a view which works after triggering one conflict errors, itself.
+        """
+        self.app.transaction.mocker_set_conflict(1)
+
+        request = self.new_request_for(hello_view)
+
+        publication = WSGIPublication(self.app, request, self.response)
+        body = consume_wsgi_result(publication())
+
+        self.assertEqual(
+            request.mocker_called(),
+            [('processInputs', (), {}), ('retry', (), {}),
+             ('processInputs', (), {}), ('close', (), {}), ('close', (), {})])
+        self.assertEqual(
+            self.app.transaction.mocker_called(),
+            [('begin', (), {}),
+             ('recordMetaData', (hello_view, request), {}),
+             ('commit', (), {}),
+             ('abort', (), {}),
+             ('begin', (), {}),
+             ('recordMetaData', (hello_view, request), {}),
+             ('commit', (), {})])
+        self.assertEqual(self.app.response.status, '200 OK')
+        self.assertEqual(
+            self.app.response.headers,
+            [('Content-Length', '12'),
+             ('Content-Type', 'text/html;charset=utf-8')])
+        self.assertEqual(body, 'Hello world!')
+        self.assertEqual(
+            get_event_names(),
+             ['PublicationStart',
+              'PublicationAfterTraversal',
+              'PublicationAfterRender',
+              'PublicationBeforeCommit',
+              'PublicationBeforeAbort',
+              'PublicationFailure',
+              'PublicationStart',
+              'PublicationAfterTraversal',
+              'PublicationAfterRender',
+              'PublicationBeforeCommit',
+              'PublicationSuccess'])
+
+    def test_conflict_errors_on_view_but_ok(self):
         """Test a view which works after triggering one conflict errors, itself.
         """
         global conflict_count
@@ -861,8 +980,15 @@ class PublisherTestCase(unittest.TestCase):
         self.assertEqual(body, 'I worked fine')
         self.assertEqual(
             get_event_names(),
-             ['PubStart', 'PubAfterTraversal', 'PubBeforeAbort', 'PubFailure',
-              'PubStart', 'PubAfterTraversal', 'PubBeforeCommit', 'PubSuccess'])
+             ['PublicationStart',
+              'PublicationAfterTraversal',
+              'PublicationBeforeAbort',
+              'PublicationFailure',
+              'PublicationStart',
+              'PublicationAfterTraversal',
+              'PublicationAfterRender',
+              'PublicationBeforeCommit',
+              'PublicationSuccess'])
 
 
 def test_suite():

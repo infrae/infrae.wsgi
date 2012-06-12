@@ -9,12 +9,12 @@ import re
 
 from ZPublisher.HTTPResponse import status_reasons
 from ZPublisher.Iterators import IStreamIterator
-from ZPublisher.pubevents import PubBeforeStreaming
 from zope.publisher.interfaces.http import IResult
 from zope.event import notify
 import zExceptions
 
 from infrae.wsgi.headers import HTTPHeaders
+from infrae.wsgi.interfaces import PublicationBeforeStreaming
 from infrae.wsgi.log import log_invalid_response_data
 
 HEAD_REGEXP = re.compile('(<head[^>]*>)', re.I)
@@ -238,7 +238,7 @@ class WSGIResponse(object):
                         self.default_charset,)
         else:
             # Fire event before streaming
-            notify(PubBeforeStreaming(self))
+            notify(PublicationBeforeStreaming(self))
 
             # Fix default Content-Type
             if not self.headers.has_key('Content-Type'):

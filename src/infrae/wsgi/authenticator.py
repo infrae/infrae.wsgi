@@ -16,6 +16,7 @@ class ZopeAuthenticator(grok.MultiAdapter):
     """
     grok.adapts(Interface, IRequest)
     grok.provides(IAuthenticator)
+    grok.implements(IAuthenticator)
 
     def __init__(self, context, request):
         self.context = context

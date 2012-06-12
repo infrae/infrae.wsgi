@@ -5,8 +5,12 @@
 from cStringIO import StringIO
 import unittest
 
+from zope.interface.verify import verifyObject
+
 from infrae.testing import ZCMLLayer
-from infrae.wsgi.publisher import WSGIRequest, set_virtual_host
+from infrae.wsgi.interfaces import IRequest, ITraverser
+from infrae.wsgi.interfaces import IVirtualHosting, IAuthenticator
+from infrae.wsgi.publisher import WSGIRequest
 from infrae.wsgi.tests.mockers import MockApplication
 import infrae.wsgi
 
@@ -20,33 +24,49 @@ class RequestTestCase(unittest.TestCase):
     layer = ZCMLLayer(infrae.wsgi)
 
     def setUp(self):
+        self.application = MockApplication()
         self.request = WSGIRequest(StringIO(TEST_REQUEST), TEST_ENVIRON, None)
-        self.request['PARENTS'] = [MockApplication(),]
+        self.request['PARENTS'] = [self.application,]
 
     def test_simple(self):
+        self.assertTrue(IRequest.providedBy(self.request))
         self.assertEqual(
             self.request.physicalPathToURL('/root'), 'http://infrae.com/root')
         self.assertEqual(
             self.request.getURL(), 'http://infrae.com')
 
-    def test_virtual_host(self):
-        set_virtual_host(self.request, 'https://silva.net')
+    def test_plugin_traverser(self):
+        retrieved_plugin = self.request.get_plugin(ITraverser)
+        self.assertIs(retrieved_plugin, None)
 
-        self.assertEqual(
-            self.request.physicalPathToURL('/root'), 'https://silva.net/root')
-        self.assertEqual(
-            self.request.getURL(), 'https://silva.net')
+        plugin = self.request.query_plugin(self.application, ITraverser)
+        self.assertNotEqual(plugin, None)
+        self.assertTrue(verifyObject(ITraverser, plugin))
 
-    def test_virtual_host_and_path(self):
-        set_virtual_host(self.request, 'http://zope.org/products/silva')
+        retrieved_plugin = self.request.get_plugin(ITraverser)
+        self.assertIs(plugin, retrieved_plugin)
 
-        self.assertEqual(
-            self.request.physicalPathToURL('/root'),
-            'http://zope.org/products/silva/root')
-        self.assertEqual(
-            self.request.getURL(),
-            'http://zope.org/products/silva')
+    def test_plugin_virtualhosting(self):
+        retrieved_plugin = self.request.get_plugin(IVirtualHosting)
+        self.assertIs(retrieved_plugin, None)
 
+        plugin = self.request.query_plugin(self.application, IVirtualHosting)
+        self.assertNotEqual(plugin, None)
+        self.assertTrue(verifyObject(IVirtualHosting, plugin))
+
+        retrieved_plugin = self.request.get_plugin(IVirtualHosting)
+        self.assertIs(plugin, retrieved_plugin)
+
+    def test_plugin_authenticator(self):
+        retrieved_plugin = self.request.get_plugin(IAuthenticator)
+        self.assertIs(retrieved_plugin, None)
+
+        plugin = self.request.query_plugin(self.application, IAuthenticator)
+        self.assertNotEqual(plugin, None)
+        self.assertTrue(verifyObject(IAuthenticator, plugin))
+
+        retrieved_plugin = self.request.get_plugin(IAuthenticator)
+        self.assertIs(plugin, retrieved_plugin)
 
 def test_suite():
     suite = unittest.TestSuite()

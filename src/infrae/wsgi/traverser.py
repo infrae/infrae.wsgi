@@ -41,6 +41,7 @@ def query_adapter(content, request, iface):
 class Traverser(grok.MultiAdapter):
     grok.adapts(Interface, IRequest)
     grok.provides(ITraverser)
+    grok.implements(ITraverser)
 
     def __init__(self, context, request):
         self.request = request

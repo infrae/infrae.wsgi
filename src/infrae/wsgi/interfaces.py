@@ -3,8 +3,13 @@
 # See also LICENSE.txt
 # $Id$
 
-from zope.interface import Interface, Attribute
+from zope.interface import Interface, Attribute, implements
 from zope.publisher.interfaces.browser import IDefaultBrowserLayer
+
+from ZPublisher.interfaces import IPubAfterTraversal, IPubEvent
+from ZPublisher.pubevents import PubStart, PubSuccess, PubFailure, \
+    PubBeforeCommit, PubAfterTraversal, PubBeforeAbort, \
+    PubBeforeStreaming
 
 
 class IRequest(IDefaultBrowserLayer):
@@ -61,3 +66,54 @@ class IAuthenticator(Interface):
 
         All request variable must be set properly.
         """
+
+
+# Publications Events, review and extend Zope2 publication events
+
+
+class IPublicationAfterTraversal(IPubAfterTraversal):
+    content = Attribute(u"Content traversed to")
+
+
+class IPublicationAfterRender(IPubEvent):
+    content = Attribute(u"Content rendered")
+
+
+class PublicationStart(PubStart):
+    pass
+
+
+class PublicationAfterTraversal(PubAfterTraversal):
+    implements(IPublicationAfterTraversal)
+
+    def __init__(self, request, content):
+        self.request = request
+        self.content = content
+
+
+class PublicationAfterRender(object):
+    implements(IPublicationAfterRender)
+
+    def __init__(self, request, content):
+        self.request = request
+        self.content = content
+
+
+class PublicationSuccess(PubSuccess):
+    pass
+
+
+class PublicationBeforeCommit(PubBeforeCommit):
+    pass
+
+
+class PublicationFailure(PubFailure):
+    pass
+
+
+class PublicationBeforeAbort(PubBeforeAbort):
+    pass
+
+
+class PublicationBeforeStreaming(PubBeforeStreaming):
+    pass

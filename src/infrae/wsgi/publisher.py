@@ -13,8 +13,6 @@ from ZPublisher.BaseRequest import exec_callables, RequestContainer
 from ZPublisher.Publish import Retry
 from ZPublisher.Request import Request
 from ZPublisher.mapply import mapply
-from ZPublisher.pubevents import PubStart, PubSuccess, PubFailure, \
-    PubBeforeCommit, PubAfterTraversal, PubBeforeAbort
 from ZODB.POSException import ConflictError
 from zope.component import queryMultiAdapter, getMultiAdapter
 from zope.event import notify
@@ -131,7 +129,7 @@ class WSGIPublication(object):
     def start(self):
         """Start the publication process.
         """
-        notify(PubStart(self.request))
+        notify(interfaces.PublicationStart(self.request))
         newInteraction()
         noSecurityManager()
         self.app.transaction.begin()
@@ -140,18 +138,30 @@ class WSGIPublication(object):
     def commit(self):
         """Commit results of the publication.
         """
-        safe_callback(self, notify, PubBeforeCommit(self.request))
+        safe_callback(
+            self,
+            notify,
+            interfaces.PublicationBeforeCommit(self.request))
         self.app.transaction.commit()
         endInteraction()
-        safe_callback(self, notify, PubSuccess(self.request))
+        safe_callback(
+            self,
+            notify,
+            interfaces.PublicationSuccess(self.request))
 
     def abort(self):
         """Abort the current publication process.
         """
-        safe_callback(self, notify, PubBeforeAbort(self.request, None, False))
+        safe_callback(
+            self,
+            notify,
+            interfaces.PublicationBeforeAbort(self.request, None, False))
         self.app.transaction.abort()
         endInteraction()
-        safe_callback(self, notify, PubFailure(self.request, None, False))
+        safe_callback(
+            self,
+            notify,
+            interfaces.PublicationFailure(self.request, None, False))
 
     def finish(self):
         """End the publication process, by either committing the
@@ -262,7 +272,8 @@ class WSGIPublication(object):
         method, path = self.get_path_and_method(root)
 
         # Do some optional virtual hosting
-        vhm = self.request.query_plugin(root, interfaces.IVirtualHosting)
+        vhm = self.request.query_plugin(
+            root, interfaces.IVirtualHosting)
         root, method, path = vhm(method, path)
 
         # Zope 2 style post traverser hooks
@@ -277,7 +288,8 @@ class WSGIPublication(object):
         del self.request._post_traverse
 
         # Run authentication
-        authenticator = self.request.query_plugin(content, interfaces.IAuthenticator)
+        authenticator = self.request.query_plugin(
+            content, interfaces.IAuthenticator)
         authenticator(Zope2.zpublisher_validated_hook)
 
         # Run Zope 2 style post traversal hooks
@@ -286,7 +298,7 @@ class WSGIPublication(object):
             if result is not None:
                 content = result
 
-        notify(PubAfterTraversal(self.request))
+        notify(interfaces.PublicationAfterTraversal(self.request, content))
 
         # Render the content into the response
         self.app.transaction.recordMetaData(content, self.request)
@@ -297,6 +309,8 @@ class WSGIPublication(object):
 
         if result is not None:
             self.response.setBody(result)
+
+        notify(interfaces.PublicationAfterRender(self.request, content))
 
         return self.result()
 

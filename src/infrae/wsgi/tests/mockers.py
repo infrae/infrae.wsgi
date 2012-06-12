@@ -2,9 +2,13 @@
 # See also LICENSE.txt
 # $Id$
 
-from zope.publisher.interfaces.browser import IBrowserRequest
+from infrae.wsgi.interfaces import IRequest
+
+from zope.component import getMultiAdapter
 from zope.interface import implements
 from ZODB.POSException import ConflictError
+
+import Acquisition
 import ExtensionClass
 
 
@@ -79,19 +83,24 @@ class MockTransactionManager(Mocker):
     def commit(self):
         self.mocker_call('commit', (), {})
         if self.__conflict:
+            if not isinstance(self.__conflict, bool):
+                self.__conflict -= 1
             raise ConflictError()
 
 
-class MockApplication(ExtensionClass.Base):
+class MockApplication(ExtensionClass.Base, Acquisition.Explicit):
     """Mockup Application.
     """
 
     def getPhysicalPath(self):
         return ('',)
 
+    def __bobo_traverse__(self, request):
+        return self
+
 
 class MockRequest(Mocker):
-    implements(IBrowserRequest)
+    implements(IRequest)
 
     def __init__(self, args=(), data={}, view=None, response=None, retry=0):
         super(MockRequest, self).__init__()
@@ -99,6 +108,9 @@ class MockRequest(Mocker):
         self.args = args
         self.environ = data.copy()
         self.other = {}
+        self.steps = []
+        self._steps = []
+        self._hacked_path = 0
         self.__data = data
         self.__view = view
         self.__tries = retry
@@ -112,7 +124,7 @@ class MockRequest(Mocker):
     def get(self, key, default=None):
         return self.__data.get(key, default)
 
-    def traverse(self, path, **options):
+    def traverseName(self, path, name):
         return self.__view
 
     def supports_retry(self):
@@ -123,3 +135,9 @@ class MockRequest(Mocker):
         assert self.__tries > 0, "Number of retries exceeded"
         self.__tries -= 1
         return self
+
+    def query_plugin(self, context, iface):
+        return getMultiAdapter((context, self), iface)
+
+    def get_plugin(self, iface):
+        return None
