@@ -53,6 +53,7 @@ class RequestTestCase(unittest.TestCase):
         plugin = self.request.query_plugin(self.application, IVirtualHosting)
         self.assertNotEqual(plugin, None)
         self.assertTrue(verifyObject(IVirtualHosting, plugin))
+        self.assertEqual(plugin.root, None)
 
         retrieved_plugin = self.request.get_plugin(IVirtualHosting)
         self.assertIs(plugin, retrieved_plugin)

@@ -22,6 +22,7 @@ class VirtualHosting(grok.MultiAdapter):
     def __init__(self, context, request):
         self.context = context
         self.request = request
+        self.root = None
 
     def __call__(self, method, path):
         root = self.context
@@ -57,6 +58,7 @@ class VirtualHosting(grok.MultiAdapter):
                     'HTTP_X_VHM_PATH'))
             if virtual_path:
                 root = traverse(virtual_path, self.context, self.request)
+                self.root = root
 
             # Step 4, in case of path manipulation, set virtual root
             if virtual_path or host_path:

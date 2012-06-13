@@ -38,13 +38,13 @@ class HeaderTestCase(unittest.TestCase):
         headers['Content-Length'] = '42'
         self.assertEquals(headers.has_key('Content-Length'), True)
         self.assertEquals(headers.has_key('content-length'), True)
-        self.failUnless('Content-Length' in headers)
-        self.failUnless('content-length' in headers)
+        self.assertTrue('Content-Length' in headers)
+        self.assertTrue('content-length' in headers)
 
         self.assertEquals(headers.has_key('Server'), False)
         self.assertEquals(headers.has_key('server'), False)
-        self.failIf('Server' in headers)
-        self.failIf('server' in headers)
+        self.assertFalse('Server' in headers)
+        self.assertFalse('server' in headers)
 
     def test_items(self):
         """items return a list of tuples containing all headers. Header

@@ -610,7 +610,7 @@ class PublisherTestCase(unittest.TestCase):
 
             body = consume_wsgi_result(result)
 
-            self.failUnless('I am not happy' in body)
+            self.assertTrue('I am not happy' in body)
             self.assertEqual(
                 request.mocker_called(),  [('close', (), {})])
             self.assertEqual(
@@ -692,7 +692,7 @@ class PublisherTestCase(unittest.TestCase):
 
         body = consume_wsgi_result(result)
 
-        self.failUnless('Page not found' in body)
+        self.assertTrue('Page not found' in body)
         self.assertEqual(
             request.mocker_called(),  [('close', (), {})])
         self.assertEqual(
@@ -846,7 +846,7 @@ class PublisherTestCase(unittest.TestCase):
 
         body = consume_wsgi_result(result)
 
-        self.failUnless('Go away' in body)
+        self.assertTrue('Go away' in body)
         self.assertEqual(
             request.mocker_called(),  [('close', (), {})])
         self.assertEqual(
@@ -879,12 +879,14 @@ class PublisherTestCase(unittest.TestCase):
                  ('recordMetaData', (hello_view, request), {}),
                  ('commit', (), {}),
                  ('abort', (), {})])
-            self.assertEqual(self.app.response.status, '503 Service Unavailable')
+            self.assertEqual(
+                self.app.response.status,
+                '503 Service Unavailable')
             self.assertEqual(
                 self.app.response.headers,
                 [('Content-Length', '198'),
                  ('Content-Type', 'text/html;charset=utf-8')])
-            self.failUnless('Service temporarily unavailable' in body)
+            self.assertTrue('Service temporarily unavailable' in body)
             self.assertEqual(
                 get_event_names(),
                 ['PublicationStart',

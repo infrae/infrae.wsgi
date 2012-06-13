@@ -29,6 +29,7 @@ class IVirtualHosting(Interface):
     """
     request = Attribute(u"Request being published")
     context = Attribute(u"Application root")
+    root = Attribute(u"Virtual Hosting that have been computed, if any.")
 
     def __call__(method, path):
         """Return a tuple (root, method, path) to use after virtual

@@ -30,7 +30,7 @@ class FunctionalTestCase(unittest.TestCase):
         self.assertEqual(self.browser.title, 'Zope QuickStart')
         self.assertEqual(self.browser.status, '200 OK')
 
-    def test_notfound(self):
+    def test_notfound_view(self):
         self.browser.open('http://localhost/nowhere')
         self.assertEqual(self.browser.status, '404 Not Found')
 
