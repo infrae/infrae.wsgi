@@ -2,17 +2,23 @@
 # See also LICENSE.txt
 # $Id$
 
+from cStringIO import StringIO
 import base64
 import re
 import urllib
 
+from Acquisition import aq_base
 from AccessControl.SecurityManagement import (
     getSecurityManager, setSecurityManager, noSecurityManager)
+from ZPublisher.BaseRequest import RequestContainer
 from transaction import commit
 
 from infrae.testing import Zope2Layer, suite_from_package, TestCase
-from infrae.wsgi.publisher import WSGIApplication
+from infrae.wsgi.interfaces import ITestRequest
+from infrae.wsgi.publisher import WSGIApplication, WSGIRequest
+from infrae.wsgi.tests.mockers import MockApplication
 from wsgi_intercept.mechanize_intercept import Browser as BaseInterceptBrowser
+from zope.interface import implements, alsoProvides
 from zope.testbrowser.browser import Browser as ZopeTestBrowser
 from zope.site.hooks import getSite, setSite, setHooks
 import wsgi_intercept
@@ -268,3 +274,29 @@ def http(string, handle_errors=False, headers=None, parsed=False,
         return ResponseParser(response)
     return response
 
+
+class TestRequest(WSGIRequest):
+    """Test request that inherit from the real request.
+    """
+    implements(ITestRequest)
+
+    def __init__(self, application=None, layers=[], headers={},
+                 hostname='localhost', method='GET'):
+        formatted_headers = ''
+        for key, value in headers.items():
+            formatted_headers += '\r\n%s:%s' % (key, value)
+        WSGIRequest.__init__(
+            self,
+            StringIO('%s /root HTTP/1.1\r\nHost:%s%s\r\n\r\n' % (
+                    method, hostname, formatted_headers)),
+            {'SERVER_NAME': hostname, 'SERVER_PORT': '80'},
+            None)
+        if application is None:
+            application = MockApplication()
+        else:
+            application = aq_base(application.getPhysicalRoot())
+        self.application = application.__of__(RequestContainer(REQUEST=self))
+        self['PARENTS'] = [self.application,]
+        for layer in layers:
+            alsoProvides(self, layer)
+        self.processInputs()

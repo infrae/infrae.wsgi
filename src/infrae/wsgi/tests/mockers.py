@@ -88,9 +88,12 @@ class MockTransactionManager(Mocker):
             raise ConflictError()
 
 
-class MockApplication(ExtensionClass.Base, Acquisition.Explicit):
+class MockApplication(ExtensionClass.Base, Acquisition.Implicit):
     """Mockup Application.
     """
+
+    def getPhysicalRoot(self):
+        return self
 
     def getPhysicalPath(self):
         return ('',)

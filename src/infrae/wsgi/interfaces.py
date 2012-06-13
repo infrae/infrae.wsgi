@@ -24,6 +24,10 @@ class IRequest(IDefaultBrowserLayer):
         """
 
 
+class ITestRequest(IRequest):
+    application = Attribute(u'Application root')
+
+
 class IVirtualHosting(Interface):
     """Implement the virtual hosting.
     """
