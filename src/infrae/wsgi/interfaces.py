@@ -26,6 +26,8 @@ class IRequest(IDefaultBrowserLayer):
 
 class ITestRequest(IRequest):
     application = Attribute(u'Application root')
+    method = Attribute(u"Queried method")
+    path = Attribute(u"Queried path")
 
 
 class IVirtualHosting(Interface):

@@ -6,6 +6,7 @@ from cStringIO import StringIO
 import base64
 import re
 import urllib
+import urlparse
 
 from Acquisition import aq_base
 from AccessControl.SecurityManagement import (
@@ -17,6 +18,7 @@ from infrae.testing import Zope2Layer, suite_from_package, TestCase
 from infrae.wsgi.interfaces import ITestRequest
 from infrae.wsgi.publisher import WSGIApplication, WSGIRequest
 from infrae.wsgi.tests.mockers import MockApplication
+from infrae.wsgi.utils import split_path_info
 from wsgi_intercept.mechanize_intercept import Browser as BaseInterceptBrowser
 from zope.interface import implements, alsoProvides
 from zope.testbrowser.browser import Browser as ZopeTestBrowser
@@ -281,15 +283,40 @@ class TestRequest(WSGIRequest):
     implements(ITestRequest)
 
     def __init__(self, application=None, layers=[], headers={},
-                 hostname='localhost', method='GET'):
-        formatted_headers = ''
-        for key, value in headers.items():
-            formatted_headers += '\r\n%s:%s' % (key, value)
+                 url='http://localhost', method='GET', debug=True):
+        url_parts = urlparse.urlparse(url)
+        netloc_parts = url_parts.netloc.split(':')
+        if len(netloc_parts) > 1:
+            hostname = netloc_parts[0]
+            port = netloc_parts[1]
+        else:
+            hostname = netloc_parts[0]
+            if url_parts.scheme == 'https':
+                port = '443'
+            else:
+                port = '80'
+        environ = {'SERVER_PROTOCOL': 'HTTP/1.0',
+                   'SERVER_NAME': hostname,
+                   'SERVER_PORT': port,
+                   'wsgi.version': (1,0),
+                   'wsgi.url_scheme': url_parts.scheme,
+                   'wsgi.input': StringIO(),
+                   'wsgi.errors': StringIO(),
+                   'wsgi.multithread': False,
+                   'wsgi.multiprocess': False,
+                   'wsgi.run_once': False,
+                   'wsgi.handleErrors': not debug,
+                   'REQUEST_METHOD': method,
+                   'SCRIPT_NAME': '',
+                   'PATH_INFO': url_parts.path,
+                   'QUERY_STRING': url_parts.query}
+        for name, value in headers:
+            http_name = ('HTTP_' + name.upper()).replace('-', '_')
+            environ[http_name] = value
         WSGIRequest.__init__(
             self,
-            StringIO('%s /root HTTP/1.1\r\nHost:%s%s\r\n\r\n' % (
-                    method, hostname, formatted_headers)),
-            {'SERVER_NAME': hostname, 'SERVER_PORT': '80'},
+            environ['wsgi.input'],
+            environ,
             None)
         if application is None:
             application = MockApplication()
@@ -300,3 +327,12 @@ class TestRequest(WSGIRequest):
         for layer in layers:
             alsoProvides(self, layer)
         self.processInputs()
+        path_info = self['PATH_INFO']
+
+        path = list(reversed(split_path_info(path_info)))
+        self['ACTUAL_URL'] = self['URL'] + urllib.quote(path_info)
+        self['TraversalRequestNameStack'] = self.path = path
+        method = self.get('REQUEST_METHOD', 'GET').upper()
+        if method in ['GET', 'POST']:
+            method = 'index_html'
+        self.method = method
