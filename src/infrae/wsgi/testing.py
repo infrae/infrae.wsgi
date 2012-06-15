@@ -339,3 +339,7 @@ class TestRequest(WSGIRequest):
         if method in ['GET', 'POST']:
             method = 'index_html'
         self.method = method
+
+    def _hold(self, callback):
+        # Discard cleanup callback
+        pass
