@@ -283,7 +283,7 @@ class TestRequest(WSGIRequest):
     implements(ITestRequest)
 
     def __init__(self, application=None, layers=[], headers={},
-                 url='http://localhost', method='GET', debug=True):
+                 url='http://localhost', method='GET', debug=True, form={}):
         url_parts = urlparse.urlparse(url)
         netloc_parts = url_parts.netloc.split(':')
         if len(netloc_parts) > 1:
@@ -295,6 +295,9 @@ class TestRequest(WSGIRequest):
                 port = '443'
             else:
                 port = '80'
+        query = url_parts.query
+        if form:
+            query = urllib.urlencode(form)
         environ = {'SERVER_PROTOCOL': 'HTTP/1.0',
                    'SERVER_NAME': hostname,
                    'SERVER_PORT': port,
@@ -309,7 +312,7 @@ class TestRequest(WSGIRequest):
                    'REQUEST_METHOD': method,
                    'SCRIPT_NAME': '',
                    'PATH_INFO': url_parts.path,
-                   'QUERY_STRING': url_parts.query}
+                   'QUERY_STRING': query}
         for name, value in headers:
             http_name = ('HTTP_' + name.upper()).replace('-', '_')
             environ[http_name] = value
