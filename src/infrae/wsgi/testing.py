@@ -297,7 +297,19 @@ class TestRequest(WSGIRequest):
                 port = '80'
         query = url_parts.query
         if form:
-            query = urllib.urlencode(form)
+            if isinstance(form, dict):
+                data = []
+                for key, value in form.iteritems():
+                    if isinstance(value, (list, tuple)):
+                        for item in value:
+                            data.append((key, item))
+                    else:
+                        data.append((key, value))
+            elif isinstance(form, (list, tuple)):
+                data = form
+            else:
+                raise ValueError("Cannot encode form", form)
+            query = urllib.urlencode(data)
         environ = {'SERVER_PROTOCOL': 'HTTP/1.0',
                    'SERVER_NAME': hostname,
                    'SERVER_PORT': port,
