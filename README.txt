@@ -95,7 +95,16 @@ It expect an option variable called ``zope_conf`` that point to the
 Zope 2 configuration file.
 
 The option ``debug_mode`` can as well be specified, to run Zope in
-debug mode.
+debug mode. In debug mode, error pages will not be rendered by Zope
+and the errors will propagate in the wsgi stack. This behavior will
+let you debug errors with specialized middlewares.
+
+The option ``zope_workers`` can be used to specify the maximum of
+threads Zope should allow to process requests at the same time
+(default to ``4``). This can be usefull if you wish to allow more
+threads in your wsgi environment, in case you have middlewares or
+other applications that intercept the requests and support more
+threads than Zope does.
 
 Virtual Hosting
 ---------------
