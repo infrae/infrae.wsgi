@@ -107,9 +107,11 @@ def zope2_application_factory(global_conf, zope_conf, **options):
     """Build a Zope2 WSGI application.
     """
     debug_mode = options.get('debug_mode', 'off') == 'on'
+    zope_workers = int(options.get('zope_workers', '4'))
     boot_zope(zope_conf, debug_mode)
 
     return WSGIApplication(
         Zope2.bobo_application,
         Zope2.zpublisher_transactions_manager,
-        not debug_mode)
+        not debug_mode,
+        zope_workers)

@@ -2,10 +2,11 @@
 # See also LICENSE.txt
 # $Id$
 
-from tempfile import TemporaryFile
 from cStringIO import StringIO
-import socket
+from tempfile import TemporaryFile
 from urllib import quote
+import socket
+import threading
 
 from AccessControl.SecurityManagement import noSecurityManager
 from Acquisition.interfaces import IAcquirer
@@ -71,10 +72,11 @@ class WSGIResult(object):
     request at the end.
     """
 
-    def __init__(self, request, publisher, data):
+    def __init__(self, request, publisher, data, cleanup=None):
         self.__next = iter(data).next
         self.request = request
         self.publisher = publisher
+        self.cleanup = cleanup
         self.__iteration_error = False
 
     def next(self):
@@ -103,9 +105,9 @@ class WSGIResult(object):
             self.publisher.abort()
             raise
         finally:
-            # Always close the request, even if there errors while
-            # committing.
-            self.request.close()
+            if self.cleanup is not None:
+                # Always cleanup
+                self.cleanup()
 
 
 def safe_callback(publisher, func, *args, **kwargs):
@@ -395,18 +397,18 @@ class WSGIPublication(object):
                 data = self.result()
         return data
 
-    def __call__(self):
+    def __call__(self, cleanup=None):
         """Publish the request and send the result via an iterator.
         """
         try:
             data = self.publish_and_retry()
             self.response.startWSGIResponse()
-            return WSGIResult(self.request, self, data)
+            return WSGIResult(self.request, self, data, cleanup)
         except Exception:
             # In case of exception we didn't catch (like
             # AbortPublication), abort all the current transaction.
             self.abort()
-            self.request.close()
+            cleanup()
             raise
 
 
@@ -414,11 +416,13 @@ class WSGIApplication(object):
     """Zope WSGI application.
     """
 
-    def __init__(self, application, transaction, default_handle_errors=True):
+    def __init__(self, application, transaction,
+                 handle_errors=True, concurrency=4):
         self.application = application
         self.transaction = transaction
         self.memory_maxsize = 2 << 20
-        self.default_handle_errors = default_handle_errors
+        self.handle_errors = handle_errors
+        self.concurrency = threading.Semaphore(concurrency)
 
     def save_input(self, environ):
         """We want to save the request input in order to be able to
@@ -456,13 +460,18 @@ class WSGIApplication(object):
         """
         try:
             debug_mode = not environ.get(
-                'wsgi.handleErrors', self.default_handle_errors)
+                'wsgi.handleErrors', self.handle_errors)
             self.save_input(environ)
             response = WSGIResponse(environ, start_response, debug_mode)
             request = WSGIRequest(environ['wsgi.input'], environ, response)
             publication = WSGIPublication(self, request, response)
 
-            return publication()
+            self.concurrency.acquire()
+            def cleanup(context=None):
+                request.close()
+                self.concurrency.release()
+
+            return publication(cleanup)
         except AbortPublication, error:
             if not error.response_started:
                 msg = 'Socket error'

@@ -232,7 +232,7 @@ class PublisherTestCase(unittest.TestCase):
         request = self.new_request_for(hello_view)
         with LoggingTesting('infrae.wsgi') as logs:
             publication = WSGIPublication(self.app, request, self.response)
-            result = publication()
+            result = publication(lambda: request.close())
 
             self.assertEqual(
                 request.mocker_called(),
@@ -274,7 +274,7 @@ class PublisherTestCase(unittest.TestCase):
         request = self.new_request_for(no_content_view)
         with LoggingTesting('infrae.wsgi') as logs:
             publication = WSGIPublication(self.app, request, self.response)
-            result = publication()
+            result = publication(lambda: request.close())
 
             self.assertEqual(
                 request.mocker_called(),
@@ -317,7 +317,8 @@ class PublisherTestCase(unittest.TestCase):
         request = self.new_request_for(result_view)
         with LoggingTesting('infrae.wsgi') as logs:
             publication = WSGIPublication(self.app, request, self.response)
-            result = publication()
+            result = publication(lambda: request.close())
+
 
             self.assertEqual(
                 request.mocker_called(),
@@ -363,7 +364,7 @@ class PublisherTestCase(unittest.TestCase):
         request = self.new_request_for(bugous_result_view)
         with LoggingTesting('infrae.wsgi') as logs:
             publication = WSGIPublication(self.app, request, self.response)
-            result = publication()
+            result = publication(lambda: request.close())
 
             self.assertEqual(
                 request.mocker_called(),
@@ -410,7 +411,7 @@ class PublisherTestCase(unittest.TestCase):
 
         request = self.new_request_for(result_view)
         publication = WSGIPublication(self.app, request, self.response)
-        result = publication()
+        result = publication(lambda: request.close())
 
         self.assertEqual(
             request.mocker_called(),
@@ -455,7 +456,7 @@ class PublisherTestCase(unittest.TestCase):
         """
         request = self.new_request_for(streamiterator_view)
         publication = WSGIPublication(self.app, request, self.response)
-        result = publication()
+        result = publication(lambda: request.close())
 
         self.assertEqual(
             request.mocker_called(),
@@ -498,7 +499,7 @@ class PublisherTestCase(unittest.TestCase):
         """
         request = self.new_request_for(bugous_streamiterator_view)
         publication = WSGIPublication(self.app, request, self.response)
-        result = publication()
+        result = publication(lambda: request.close())
 
         self.assertEqual(
             request.mocker_called(),
@@ -541,7 +542,7 @@ class PublisherTestCase(unittest.TestCase):
 
         request = self.new_request_for(streamiterator_view)
         publication = WSGIPublication(self.app, request, self.response)
-        result = publication()
+        result = publication(lambda: request.close())
 
         self.assertEqual(
             request.mocker_called(),
@@ -584,7 +585,7 @@ class PublisherTestCase(unittest.TestCase):
         request = self.new_request_for(bugous_view)
         with LoggingTesting('infrae.wsgi') as logs:
             publication = WSGIPublication(self.app, request, self.response)
-            result = publication()
+            result = publication(lambda: request.close())
 
             self.assertEqual(
                 request.mocker_called(),
@@ -626,7 +627,7 @@ class PublisherTestCase(unittest.TestCase):
         request = self.new_request_for(invalid_view)
         with LoggingTesting('infrae.wsgi') as logs:
             publication = WSGIPublication(self.app, request, self.response)
-            result = publication()
+            result = publication(lambda: request.close())
 
             self.assertEqual(
                 request.mocker_called(),
@@ -667,7 +668,7 @@ class PublisherTestCase(unittest.TestCase):
         """
         request = self.new_request_for(not_found_view)
         publication = WSGIPublication(self.app, request, self.response)
-        result = publication()
+        result = publication(lambda: request.close())
 
         self.assertEqual(
             request.mocker_called(),
@@ -705,7 +706,7 @@ class PublisherTestCase(unittest.TestCase):
         """
         request = self.new_request_for(redirect_view)
         publication = WSGIPublication(self.app, request, self.response)
-        result = publication()
+        result = publication(lambda: request.close())
 
         self.assertEqual(
             request.mocker_called(),
@@ -742,7 +743,7 @@ class PublisherTestCase(unittest.TestCase):
         """
         request = self.new_request_for(unauthorized_view)
         publication = WSGIPublication(self.app, request, self.response)
-        result = publication()
+        result = publication(lambda: request.close())
 
         self.assertEqual(
             request.mocker_called(),
@@ -782,7 +783,8 @@ class PublisherTestCase(unittest.TestCase):
             response = WSGIResponse({}, self.app.response)
             response._unauthorized = bugous_view # Set the bugous handler
             publication = WSGIPublication(self.app, request, response)
-            result = publication()
+            result = publication(lambda: request.close())
+
             self.assertEqual(
                 request.mocker_called(),
                 [('processInputs', (), {})])
@@ -821,7 +823,7 @@ class PublisherTestCase(unittest.TestCase):
         """
         request = self.new_request_for(forbidden_view)
         publication = WSGIPublication(self.app, request, self.response)
-        result = publication()
+        result = publication(lambda: request.close())
 
         self.assertEqual(
             request.mocker_called(),
@@ -863,7 +865,7 @@ class PublisherTestCase(unittest.TestCase):
         with LoggingTesting('infrae.wsgi') as logs:
 
             publication = WSGIPublication(self.app, request, self.response)
-            body = consume_wsgi_result(publication())
+            body = consume_wsgi_result(publication(lambda: request.close()))
 
             self.assertEqual(
                 self.app.transaction.mocker_called(),
@@ -919,7 +921,7 @@ class PublisherTestCase(unittest.TestCase):
         request = self.new_request_for(hello_view)
 
         publication = WSGIPublication(self.app, request, self.response)
-        body = consume_wsgi_result(publication())
+        body = consume_wsgi_result(publication(lambda: request.close()))
 
         self.assertEqual(
             request.mocker_called(),
@@ -962,7 +964,7 @@ class PublisherTestCase(unittest.TestCase):
 
         request = self.new_request_for(not_so_conflictuous_view)
         publication = WSGIPublication(self.app, request, self.response)
-        body = consume_wsgi_result(publication())
+        body = consume_wsgi_result(publication(lambda: request.close()))
 
         self.assertEqual(
             request.mocker_called(),
