@@ -24,6 +24,8 @@ from infrae.wsgi.tests.mockers import (
 
 DEFAULT_ENVIRON = {
     'wsgi.url_scheme': 'http',
+    'SERVER_NAME': 'infrae.com',
+    'SERVER_PORT': '80',
     'HTTP_HOST': 'infrae.com',
     'PATH_INFO': '/index.html'}
 

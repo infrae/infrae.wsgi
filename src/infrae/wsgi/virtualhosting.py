@@ -4,6 +4,7 @@
 # $Id$
 
 import urlparse
+from urllib import quote
 
 from five import grok
 from zope.interface import Interface
@@ -24,10 +25,16 @@ class VirtualHosting(grok.MultiAdapter):
         self.request = request
         self.root = None
 
+    def rewrite_url(self, base_url, original_url):
+        base = (None, None)
+        if base_url:
+            base = urlparse.urlparse(base_url)[:2]
+        return urlparse.urlunparse(
+            base + urlparse.urlparse(original_url)[2:])
+
     def __call__(self, method, path):
         root = self.context
-        virtual_host = self.request.environ.get(
-            'HTTP_X_VHM_URL')
+        virtual_host = self.request.environ.get('HTTP_X_VHM_URL')
         if virtual_host:
             url = urlparse.urlparse(virtual_host)
 
@@ -54,8 +61,7 @@ class VirtualHosting(grok.MultiAdapter):
 
             # Step 3. Traverse to the virtual root
             virtual_path = split_path_info(
-                self.request.environ.get(
-                    'HTTP_X_VHM_PATH'))
+                self.request.environ.get('HTTP_X_VHM_PATH'))
             if virtual_path:
                 root = traverse(virtual_path, self.context, self.request)
                 self.root = root
@@ -63,5 +69,9 @@ class VirtualHosting(grok.MultiAdapter):
             # Step 4, in case of path manipulation, set virtual root
             if virtual_path or host_path:
                 self.request.setVirtualRoot(host_path)
+
+            # Update Actual URL
+            self.request['ACTUAL_URL'] = (
+                self.request['URL'] + quote(self.request['PATH_INFO']))
 
         return root, method, path

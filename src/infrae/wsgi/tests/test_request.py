@@ -2,7 +2,6 @@
 # See also LICENSE.txt
 # $Id$
 
-from cStringIO import StringIO
 import unittest
 
 from zope.interface.verify import verifyObject
@@ -64,7 +63,27 @@ class RequestTestCase(unittest.TestCase):
         retrieved_plugin = request.get_plugin(IAuthenticator)
         self.assertIs(plugin, retrieved_plugin)
 
+
+class VirtualHostingTestCase(unittest.TestCase):
+    """Test the virtual hosting plugin functionality.
+    """
+    layer = ZCMLLayer(infrae.wsgi)
+
+    def test_rewrite_url(self):
+        request = TestRequest()
+        plugin = request.query_plugin(request.application, IVirtualHosting)
+        self.assertNotEqual(plugin, None)
+
+        self.assertEqual(
+            plugin.rewrite_url(None, 'http://localhost/root/folder/edit'),
+            '/root/folder/edit')
+        self.assertEqual(
+            plugin.rewrite_url('https://admin', 'http://localhost/root/edit'),
+            'https://admin/root/edit')
+
+
 def test_suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(RequestTestCase))
+    suite.addTest(unittest.makeSuite(VirtualHostingTestCase))
     return suite

@@ -37,6 +37,13 @@ class IVirtualHosting(Interface):
     context = Attribute(u"Application root")
     root = Attribute(u"Virtual Hosting that have been computed, if any.")
 
+    def rewrite_url(base_url, original_url):
+        """Rewrite ``original_url`` (a currently valid URL in the
+        current computed virtual host) to be accessible via
+        ``base_url`` (an another available virtual host). If
+        ``base_url`` is empty, only a global path will be returned.
+        """
+
     def __call__(method, path):
         """Return a tuple (root, method, path) to use after virtual
         hosting being done.
