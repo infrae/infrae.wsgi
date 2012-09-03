@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) 2011 Infrae. All rights reserved.
+# Copyright (c) 2011-2012 Infrae. All rights reserved.
 # See also LICENSE.txt
-# $Id$
 
 from zope.interface import Interface, Attribute, implements
 from zope.publisher.interfaces.browser import IDefaultBrowserLayer
