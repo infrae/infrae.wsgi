@@ -1,10 +1,24 @@
 Changes
 =======
 
-1.4 (unreleased)
+2.0 (2012-09-04)
 ----------------
 
-- ...
+- Refactor the virtual hosting, traversing and authentication code
+  from Zope 2 BaseRequest into three different pieces of code, that
+  can customizable. This makes possible to change how authentication,
+  or virtual hosting is done.
+
+- Add a ``TestRequest`` that can be used in tests. This is the same
+  thing than a ``zope.publisher`` test request, except it is based on
+  a Zope 2 request, and have all the same behavior than a Zope 2
+  request.
+
+- A configurable semaphore have been added to limit the number of
+  concurrent threads that can access the Zope 2 application. This is
+  usefull when you have middleware that handles requests on their own,
+  so they are not limited to the restriction imposed by Zope 2 on the
+  number of threads.
 
 1.3 (2011-07-27)
 ----------------
