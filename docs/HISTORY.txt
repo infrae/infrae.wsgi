@@ -11,7 +11,7 @@ Changes
 
 - Refactor the virtual hosting, traversing and authentication code
   from Zope 2 BaseRequest into three different pieces of code, that
-  can customizable. This makes possible to change how authentication,
+  can be customized. This makes possible to change how authentication,
   or virtual hosting is done.
 
 - Add a ``TestRequest`` that can be used in tests. This is the same
