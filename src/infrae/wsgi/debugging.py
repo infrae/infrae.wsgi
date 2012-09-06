@@ -62,3 +62,31 @@ class DebugThreads(grok.View):
 
     def render(self):
         return u'<html><body><pre>%s</pre></body></html>' % dump_threads()
+
+
+try:
+    import webob.dec
+except ImportError:
+    def make_middleware(app, global_config, **config):
+        return app
+else:
+    class DebugThreadsMiddleware(object):
+        """Display the threads status. Warning: if enabled, this
+        can be accessed without any authentication.
+        """
+
+        def __init__(self, app, name="++threads++"):
+            self.app = app
+            self.name = name
+
+        @webob.dec.wsgify
+        def __call__(self, request):
+            if request.path_info.startswith('/' + self.name):
+                threads = dump_threads()
+                return '<html><body><pre>%s</pre></body></html>' % threads
+            return request.get_response(self.app)
+
+    def make_middleware(app, global_config, **config):
+        name = config.get('name', '++threads++')
+        return DebugThreadsMiddleware(app, name=name)
+

@@ -52,6 +52,9 @@ setup(name='infrae.wsgi',
         'paste.app_factory': [
             'zope2 = infrae.wsgi.paster:zope2_application_factory',
             ],
+        'paste.filter_app_factory': [
+            'threads = infrae.wsgi.debugging:make_middleware',
+            ],
         },
       tests_require = tests_require,
       extras_require = {'test': tests_require},
