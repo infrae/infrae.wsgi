@@ -8,6 +8,8 @@ from urllib import quote
 import socket
 import threading
 
+from zope.cachedescriptors.property import Lazy
+
 from AccessControl.SecurityManagement import noSecurityManager
 from Acquisition.interfaces import IAcquirer
 from ZPublisher.BaseRequest import exec_callables, RequestContainer
@@ -73,11 +75,16 @@ class WSGIResult(object):
     """
 
     def __init__(self, request, publisher, data, cleanup=None):
-        self.__next = iter(data).next
         self.request = request
         self.publisher = publisher
         self.cleanup = cleanup
-        self.__iteration_error = False
+        self.__next = iter(data).next
+        self.__failed = False
+
+    @Lazy
+    def url(self):
+        return reconstruct_url_from_environ(self.request.environ)
+
 
     def next(self):
         try:
@@ -85,7 +92,9 @@ class WSGIResult(object):
         except StopIteration:
             raise
         except Exception:
-            self.__iteration_error = True
+            logger.exception(
+                u"Unexpected error in the WSGI stack for '%s'", self.url)
+            self.__failed = True
             raise
 
     def __iter__(self):
@@ -93,11 +102,10 @@ class WSGIResult(object):
 
     def close(self):
         try:
-            if self.__iteration_error:
+            if self.__failed:
                 logger.error(
                     "An error happened in the WSGI stack "
-                    "while iterating the result for the url '%s'" %
-                    reconstruct_url_from_environ(self.request.environ))
+                    "while iterating the result for the url '%s'", self.url)
                 self.publisher.abort()
             else:
                 self.publisher.finish()
@@ -105,8 +113,8 @@ class WSGIResult(object):
             self.publisher.abort()
             raise
         finally:
+            # Always cleanup
             if self.cleanup is not None:
-                # Always cleanup
                 self.cleanup()
 
 
