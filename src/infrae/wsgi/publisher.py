@@ -85,7 +85,6 @@ class WSGIResult(object):
     def url(self):
         return reconstruct_url_from_environ(self.request.environ)
 
-
     def next(self):
         try:
             return self.__next()

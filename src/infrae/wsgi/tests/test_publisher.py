@@ -607,6 +607,7 @@ class PublisherTestCase(unittest.TestCase):
                 get_event_names(),
                 ['PublicationStart',
                  'PublicationAfterTraversal',
+                 'PublicationBeforeError',
                  'PublicationAfterRender',
                  'PublicationBeforeAbort',
                  'PublicationFailure'])
@@ -689,6 +690,7 @@ class PublisherTestCase(unittest.TestCase):
             get_event_names(),
             ['PublicationStart',
              'PublicationAfterTraversal',
+             'PublicationBeforeError',
              'PublicationAfterRender',
              'PublicationBeforeAbort',
              'PublicationFailure'])
@@ -844,6 +846,7 @@ class PublisherTestCase(unittest.TestCase):
             get_event_names(),
             ['PublicationStart',
              'PublicationAfterTraversal',
+             'PublicationBeforeError',
              'PublicationAfterRender',
              'PublicationBeforeCommit',
              'PublicationSuccess'])

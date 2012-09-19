@@ -112,12 +112,13 @@ Virtual Hosting
 You can add two headers in your proxy in order to control the virtual
 hosting:
 
-- ``X-VHM-URL``: That would the complete URL of your site, where you
-  want to see your Zope application, like
+- ``X-VHM-URL``: That would the complete URL of your site, at which
+  you want to see your Zope application, like
   ``http://www.mysite.com/application``.
 
-- ``X-VHM-Path``: That would be an optional path to Zope folder you
-  see instead of the Zope root, lile ``/my/folder``.
+- ``X-VHM-Path``: That would be an optional path to the Zope folder
+  you see at the given URL instead of the Zope root, lile
+  ``/my/folder``.
 
 
 Testing
