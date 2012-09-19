@@ -92,6 +92,10 @@ class IPublicationAfterRender(IPubEvent):
     content = Attribute(u"Content rendered")
 
 
+class IPublicationBeforeError(IPubEvent):
+    content = Attribute(u"Content where the error happened.")
+
+
 class PublicationStart(PubStart):
     pass
 
@@ -103,6 +107,13 @@ class PublicationAfterTraversal(PubAfterTraversal):
         self.request = request
         self.content = content
 
+
+class PublicationBeforeError(object):
+    implements(IPublicationBeforeError)
+
+    def __init__(self, request, content):
+        self.request = request
+        self.content = content
 
 class PublicationAfterRender(object):
     implements(IPublicationAfterRender)

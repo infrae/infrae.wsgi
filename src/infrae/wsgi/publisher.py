@@ -217,6 +217,8 @@ class WSGIPublication(object):
             (context, self.request), name='error.html')
 
         if error_page is not None:
+            notify(interfaces.PublicationBeforeError(
+                    self.request, last_known_obj))
             try:
                 error_result = error_page()
                 if error_result is not None:
