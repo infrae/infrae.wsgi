@@ -21,7 +21,7 @@ from zope.component import queryMultiAdapter, getMultiAdapter
 from zope.event import notify
 from zope.interface import implements
 from zope.site.hooks import getSite
-from zope.publisher.interfaces.browser import IBrowserPage
+from zope.publisher.interfaces.browser import IBrowserPage, IBrowserPublisher
 from zope.security.management import newInteraction, endInteraction
 import Zope2
 import zExceptions
@@ -212,19 +212,25 @@ class WSGIPublication(object):
         context = DefaultError(error)
         if IAcquirer.providedBy(last_known_obj):
             context = context.__of__(last_known_obj)
-        error_page = queryMultiAdapter(
+        error_view = queryMultiAdapter(
             (context, self.request), name='error.html')
+        if IBrowserPublisher.providedBy(error_view):
+            error_view, error_path = error_view.browserDefault(self.request)
+            if error_path:
+                raise NotImplementedError(
+                    u'Error browserDefault retuned an path. '
+                    u'This is not implemented.')
 
-        if error_page is not None:
+        if error_view is not None:
             notify(interfaces.PublicationBeforeError(
                     self.request, last_known_obj))
             try:
-                error_result = error_page()
+                error_result = error_view()
                 if error_result is not None:
                     self.response.setBody(error_result)
 
                 notify(interfaces.PublicationAfterRender(
-                        self.request, error_page))
+                        self.request, error_view))
 
             except Exception as error:
                 log_last_error(
