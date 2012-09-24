@@ -5,7 +5,7 @@
 from setuptools import setup, find_packages
 import os
 
-version = '2.1dev'
+version = '2.0.1'
 
 tests_require = [
     'infrae.testing',

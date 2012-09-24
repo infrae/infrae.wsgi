@@ -1,10 +1,16 @@
 Changes
 =======
 
-2.1 (unreleased)
-----------------
+2.0.1 (2012-09-19)
+------------------
 
-- ...
+- Add an optional WSGI middleware that display the same debug
+  information than ``debugzope.html`` does.
+
+- Add an event that is triggered before an error page is rendered.
+
+- If an error view implements ``IBrowserPublisher``, call
+  ``browserDefault`` in order to retrieve the real view to render.
 
 2.0 (2012-09-04)
 ----------------
