@@ -373,8 +373,9 @@ class WSGIPublication(object):
         except Exception as error:
             content = last_content()
             log_last_error(self.request, self.response, content)
-            if self.response.debug_mode:
-                # If debug mode is on, don't render anything for the error.
+            if not self.response.handle_errors:
+                # If handle_errors is off, don't render anything for the 
+                # error and instead propagate it up the stack
                 raise
 
             self.error(error, content)
@@ -432,10 +433,12 @@ class WSGIApplication(object):
     """
 
     def __init__(self, application, transaction,
-                 handle_errors=True, concurrency=4):
+                 debug_mode=False, handle_errors=True, 
+                 concurrency=4):
         self.application = application
         self.transaction = transaction
         self.memory_maxsize = 2 << 20
+        self.debug_mode = debug_mode
         self.handle_errors = handle_errors
         self.concurrency = threading.Semaphore(concurrency)
 
@@ -474,10 +477,11 @@ class WSGIApplication(object):
         """WSGI entry point.
         """
         try:
-            debug_mode = not environ.get(
+            handle_errors = environ.get(
                 'wsgi.handleErrors', self.handle_errors)
             self.save_input(environ)
-            response = WSGIResponse(environ, start_response, debug_mode)
+            response = WSGIResponse(environ, start_response, self.debug_mode,
+                                    handle_errors)
             request = WSGIRequest(environ['wsgi.input'], environ, response)
             publication = WSGIPublication(self, request, response)
 

@@ -9,6 +9,7 @@ import sys
 
 from Zope2 import startup
 from infrae.wsgi.publisher import WSGIApplication
+from infrae.wsgi.log import reporter
 from zope.event import notify
 from zope.processlifetime import ProcessStarting
 import App.config
@@ -110,8 +111,28 @@ def zope2_application_factory(global_conf, zope_conf, **options):
     zope_workers = int(options.get('zope_workers', '4'))
     boot_zope(zope_conf, debug_mode)
 
+    #by default when in debug mode we do not want to catch exceptions but allow
+    # them to propagate to outer wsgi middlewares (e.g. z3c.evalexception).
+    # setting this to 'off' will disable the propagation
+    propagate = options.get('debug_propagate_exceptions', 'on') == 'on'
+    if not debug_mode:
+        propagate = False
+    
+    ignore_errors_override = options.get('ignore_errors_override', '').split(',')
+    if ignore_errors_override:
+        errors = reporter.ignore_errors[:]
+        override = set(( e.strip() for e in ignore_errors_override ))
+        changed = False
+        for e in override:
+            if e in errors:
+                errors.remove(e)
+                changed = True
+        if changed:
+            reporter.ignore_errors = errors
+            
     return WSGIApplication(
         Zope2.bobo_application,
         Zope2.zpublisher_transactions_manager,
-        not debug_mode,
+        debug_mode,
+        not propagate,
         zope_workers)

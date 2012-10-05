@@ -4,7 +4,13 @@ Changes
 2.1 (unreleased)
 ----------------
 
-- ...
+- Added paster option debug_propagates_exceptions, defauling to 'on', which
+  when in debug mode and set to 'off' will NOT propagate exceptions up the
+  wsgi middleware stack.
+  
+- Added paster option ignore_errors_override, which accepts a comma-separated
+  list of the exception names which are ignored by default.  When present in
+  this list, these exceptions will NOT be ignored.
 
 2.0.1 (2012-09-19)
 ------------------

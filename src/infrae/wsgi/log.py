@@ -12,6 +12,7 @@ from zExceptions.ExceptionFormatter import format_exception
 from zope.browser.interfaces import IView
 from zope.interface import Interface
 from five import grok
+import App.config
 
 from infrae.wsgi.utils import reconstruct_url_from_environ
 
@@ -58,7 +59,8 @@ class ErrorLogView(grok.View):
         self.all_errors = reporter.all_ignored_errors
         self.ignored_errors = reporter.ignore_errors
         self.errors = reporter.get_last_errors()
-        self.debug_mode = self.request.response.debug_mode
+        #self.debug_mode = self.request.response.debug_mode
+        self.debug_mode = not not App.config.getConfiguration().debug_mode
 
 
 class ErrorSupplement(object):
@@ -96,7 +98,7 @@ class ErrorReporter(object):
 
     def __init__(self):
         self.__last_errors = collections.deque([], 25)
-        self.__ignore_errors = self.all_ignored_errors
+        self.__ignore_errors = self.all_ignored_errors[:]
 
     @apply
     def ignore_errors():

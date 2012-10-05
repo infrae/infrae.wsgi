@@ -77,6 +77,10 @@ Errors are logged with useful information:
 The error log can be accessible online via ``/errorlog.html`` on any
 Zope 2 content.
 
+The error log ignores certain errors by default: NotFound, Redirect, 
+Unauthorized, Forbidden, BadRequest, BrokenReferenceError.  The errlog.html page
+has a form configure some (or all) of these errors to not be ignored.  This is 
+not a persistent setting and is forgotten on restart.
 
 Installation
 ============
@@ -97,7 +101,10 @@ Zope 2 configuration file.
 The option ``debug_mode`` can as well be specified, to run Zope in
 debug mode. In debug mode, error pages will not be rendered by Zope
 and the errors will propagate in the wsgi stack. This behavior will
-let you debug errors with specialized middlewares.
+let you debug errors with specialized middlewares.  
+
+To disable the error propagation in debug mode, the option 
+``debug_propagate_exceptions`` can be set to ``off``.
 
 The option ``zope_workers`` can be used to specify the maximum of
 threads Zope should allow to process requests at the same time
@@ -105,6 +112,10 @@ threads Zope should allow to process requests at the same time
 threads in your wsgi environment, in case you have middlewares or
 other applications that intercept the requests and support more
 threads than Zope does.
+
+There option ``ignore_errors_override`` that accepts a comma-separated
+list of errors which will not be ignored.  This overrides the default list
+of ignored errors (see the Errors section, above)
 
 Virtual Hosting
 ---------------
