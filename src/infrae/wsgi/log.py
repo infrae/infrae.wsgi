@@ -59,8 +59,7 @@ class ErrorLogView(grok.View):
         self.all_errors = reporter.all_ignored_errors
         self.ignored_errors = reporter.ignore_errors
         self.errors = reporter.get_last_errors()
-        #self.debug_mode = self.request.response.debug_mode
-        self.debug_mode = not not App.config.getConfiguration().debug_mode
+        self.debug_mode = self.request.response.debug_mode
 
 
 class ErrorSupplement(object):
