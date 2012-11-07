@@ -152,7 +152,6 @@ class WSGIPublication(object):
             notify,
             interfaces.PublicationBeforeCommit(self.request))
         self.app.transaction.commit()
-        endInteraction()
         safe_callback(
             self,
             notify,
@@ -166,7 +165,6 @@ class WSGIPublication(object):
             notify,
             interfaces.PublicationBeforeAbort(self.request, None, False))
         self.app.transaction.abort()
-        endInteraction()
         safe_callback(
             self,
             notify,
@@ -198,7 +196,7 @@ class WSGIPublication(object):
             self.finish()
         return data
 
-    def error(self, error, last_known_obj):
+    def render_error(self, error, last_known_obj):
         """Render and log an error.
         """
         if IBrowserPage.providedBy(last_known_obj):
@@ -242,6 +240,13 @@ class WSGIPublication(object):
             logger.error('No action defined for last exception')
             self.response.setStatus(500)
             self.response.setBody(DEFAULT_ERROR_TEMPLATE)
+
+    def should_render_errors(self):
+        """Return True if the error pages should be rendered.
+        """
+        return self.request.environ.get(
+            'wsgi.handleErrors',
+            not self.app.debug_exceptions)
 
     def get_application_root(self):
         """Return a new Zope root for this request.
@@ -335,7 +340,7 @@ class WSGIPublication(object):
 
         return self.result()
 
-    def publish_and_manage_errors(self):
+    def publish_and_render_errors(self):
         """Publish the request, manage errors.
         """
         def last_content():
@@ -373,12 +378,11 @@ class WSGIPublication(object):
         except Exception as error:
             content = last_content()
             log_last_error(self.request, self.response, content)
-            if not self.response.handle_errors:
-                # If handle_errors is off, don't render anything for the 
-                # error and instead propagate it up the stack
+            if not self.should_render_errors():
+                # If we don't handle errors, reraise the exception.
                 raise
 
-            self.error(error, content)
+            self.render_error(error, content)
 
         # Return the result of the response
         return self.result()
@@ -388,7 +392,7 @@ class WSGIPublication(object):
         fails.
         """
         try:
-            data = self.publish_and_manage_errors()
+            data = self.publish_and_render_errors()
         except (ConflictError, Retry):
             self.abort()
             self.publication_done = True
@@ -433,13 +437,13 @@ class WSGIApplication(object):
     """
 
     def __init__(self, application, transaction,
-                 debug_mode=False, handle_errors=True, 
+                 debug_mode=False, debug_exceptions=True,
                  concurrency=4):
         self.application = application
         self.transaction = transaction
         self.memory_maxsize = 2 << 20
         self.debug_mode = debug_mode
-        self.handle_errors = handle_errors
+        self.debug_exceptions = debug_exceptions
         self.concurrency = threading.Semaphore(concurrency)
 
     def save_input(self, environ):
@@ -477,17 +481,16 @@ class WSGIApplication(object):
         """WSGI entry point.
         """
         try:
-            handle_errors = environ.get(
-                'wsgi.handleErrors', self.handle_errors)
             self.save_input(environ)
-            response = WSGIResponse(environ, start_response, self.debug_mode,
-                                    handle_errors)
+            response = WSGIResponse(environ, start_response, self.debug_mode)
             request = WSGIRequest(environ['wsgi.input'], environ, response)
             publication = WSGIPublication(self, request, response)
 
             self.concurrency.acquire()
             def cleanup(context=None):
                 request.close()
+                endInteraction()
+                noSecurityManager()
                 self.concurrency.release()
 
             return publication(cleanup)

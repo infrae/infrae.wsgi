@@ -80,17 +80,15 @@ class WSGIResponse(object):
     realm = 'Zope'
 
     # This is just need by FSDTMLFile. It should be removed when no
-    # DTML files a re needed anymore
+    # DTML files are needed anymore
     __allow_access_to_unprotected_subobjects__ = 1
 
-    def __init__(self, environ, start_response, debug_mode=False, 
-                 handle_errors=True):
+    def __init__(self, environ, start_response, debug_mode=False):
         self.headers = HTTPHeaders()
         self.status = 200
         self.cookies = {}
         self.body = None
         self.debug_mode = debug_mode
-        self.handle_errors = handle_errors
         self.__base = None
         self.__environ = environ
         self.__start_response = start_response

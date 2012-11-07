@@ -53,11 +53,11 @@ class ErrorLogView(grok.View):
 
     def update(self):
         if 'ignore_errors_update' in self.request.form:
-            reporter.ignore_errors = self.request.form.get(
+            reporter.ignored_errors = self.request.form.get(
                 'ignore_errors', [])
 
         self.all_errors = reporter.all_ignored_errors
-        self.ignored_errors = reporter.ignore_errors
+        self.ignored_errors = reporter.ignored_errors
         self.errors = reporter.get_last_errors()
         self.debug_mode = self.request.response.debug_mode
 
@@ -97,15 +97,29 @@ class ErrorReporter(object):
 
     def __init__(self):
         self.__last_errors = collections.deque([], 25)
-        self.__ignore_errors = self.all_ignored_errors[:]
+        self.__ignore_errors = set(self.all_ignored_errors)
+
+    def show_errors(self, errors):
+        """Show the given errors.
+        """
+        self.__ignore_errors -= set(errors)
+
+    def ignore_errors(self, errors):
+        """Ignore the given errors.
+        """
+        self.__ignore_errors += set(errors)
 
     @apply
-    def ignore_errors():
+    def ignored_errors():
+        """Access currently ignored errors.
+        """
+
         def getter(self):
-            return self.__ignore_errors
-        def setter(self, value):
-            self.__ignore_errors = set(value).intersection(
-                set(self.all_ignored_errors))
+            return list(self.__ignore_errors)
+
+        def setter(self, errors):
+            self.__ignore_errors = set(errors)
+
         return property(getter, setter)
 
     def get_last_errors(self):
@@ -151,7 +165,6 @@ class ErrorReporter(object):
 
         log_entry.extend(format_exception(error_type, error_value, traceback))
         self.log_error(request['URL'], ''.join(log_entry))
-
 
     def log_error(self, url, report):
         """Log a given error.

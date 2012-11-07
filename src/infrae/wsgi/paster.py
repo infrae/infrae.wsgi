@@ -103,36 +103,44 @@ def boot_zope(config_filename, debug_mode=False):
     finally:
         bootstrap_lock.release()
 
-
 def zope2_application_factory(global_conf, zope_conf, **options):
     """Build a Zope2 WSGI application.
     """
     debug_mode = options.get('debug_mode', 'off') == 'on'
-    zope_workers = int(options.get('zope_workers', '4'))
+    zope_workers = configuration_int(options, 'zope_workers')
     boot_zope(zope_conf, debug_mode)
 
-    #by default when in debug mode we do not want to catch exceptions but allow
-    # them to propagate to outer wsgi middlewares (e.g. z3c.evalexception).
-    # setting this to 'off' will disable the propagation
-    propagate = options.get('debug_propagate_exceptions', 'on') == 'on'
-    if not debug_mode:
-        propagate = False
-    
-    ignore_errors_override = options.get('ignore_errors_override', '').split(',')
-    if ignore_errors_override:
-        errors = reporter.ignore_errors[:]
-        override = set(( e.strip() for e in ignore_errors_override ))
-        changed = False
-        for e in override:
-            if e in errors:
-                errors.remove(e)
-                changed = True
-        if changed:
-            reporter.ignore_errors = errors
-            
+    # By default debug mode does not render exceptions as error pages
+    # but allow them to propagate to outer wsgi middlewares
+    # (e.g. z3c.evalexception). Setting this to 'off' will disable the
+    # propagation
+    debug_exceptions = (debug_mode and
+                        options.get('debug_exceptions', 'on') == 'on')
+
+    ignore_errors = configuration_list(options, 'ignore_errors')
+    if ignore_errors:
+        reporter.ignore_errors(ignore_errors)
+    show_errors = configuration_list(options, 'show_errors')
+    if show_errors:
+        reporter.show_errors(show_errors)
+
     return WSGIApplication(
         Zope2.bobo_application,
         Zope2.zpublisher_transactions_manager,
         debug_mode,
-        not propagate,
+        debug_exceptions,
         zope_workers)
+
+# Utilities to read configuration options
+
+def configuration_list(options, key, default=''):
+    return filter(lambda value: value,
+                  map(lambda value: value.strip(),
+                      options.get(key, default).split(',')))
+
+def configuration_int(options, key, default='4'):
+    value = options.get(key, default)
+    try:
+        return int(value)
+    except:
+        return int(default)
