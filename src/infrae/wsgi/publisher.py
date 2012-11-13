@@ -253,7 +253,7 @@ class WSGIPublication(object):
         """
         # This create the connection to the ZODB, wrap it in the
         # request.  After this, request.close must always be called.
-        root = self.app.application.__bobo_traverse__(self.request)
+        root = self.app.root.__bobo_traverse__(self.request)
         return root.__of__(RequestContainer(REQUEST=self.request))
 
     def get_path_and_method(self, root):
@@ -400,14 +400,15 @@ class WSGIPublication(object):
                 # If can still retry, and didn't send any data yet, do it.
                 logger.info('Conflict, retrying request %s' % (
                         reconstruct_url_from_environ(self.request.environ)))
-                new_request = self.request.retry()
+                endInteraction()
+                request = self.request.retry()
                 try:
-                    new_publication = self.__class__(
-                        self.app, new_request, self.response)
-                    data = new_publication.publish_and_retry()
-                    self.publication_done = new_publication.publication_done
+                    publication = self.__class__(
+                        self.app, request, self.response)
+                    data = publication.publish_and_retry()
+                    self.publication_done = publication.publication_done
                 finally:
-                    new_request.close()
+                    request.close()
             else:
                 # Otherwise, just render a plain error.
                 logger.error('Conflict error for request %s' % (
@@ -436,10 +437,10 @@ class WSGIApplication(object):
     """Zope WSGI application.
     """
 
-    def __init__(self, application, transaction,
+    def __init__(self, root, transaction,
                  debug_mode=False, debug_exceptions=True,
                  concurrency=4):
-        self.application = application
+        self.root = root
         self.transaction = transaction
         self.memory_maxsize = 2 << 20
         self.debug_mode = debug_mode

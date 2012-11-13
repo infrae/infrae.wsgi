@@ -6,9 +6,10 @@ from cStringIO import StringIO
 import unittest
 import logging
 
+from zope.event import notify
 from zope.interface import implements
 from zope.publisher.interfaces.http import IResult
-from zope.event import notify
+from zope.security.management import endInteraction
 
 from ZODB.POSException import ConflictError
 from ZPublisher.Iterators import IStreamIterator
@@ -18,8 +19,7 @@ import infrae.wsgi
 from infrae.testing import ZCMLLayer, get_event_names
 from infrae.wsgi.publisher import WSGIPublication
 from infrae.wsgi.response import WSGIResponse
-from infrae.wsgi.tests.mockers import (
-    MockWSGIStartResponse, MockTransactionManager, MockRequest, MockApplication)
+from infrae.wsgi.tests.mockers import MockRequest, MockApplication
 
 
 DEFAULT_ENVIRON = {
@@ -30,6 +30,11 @@ DEFAULT_ENVIRON = {
     'PATH_INFO': '/index.html'}
 
 # Some test views
+
+def cleanup(request):
+    request.close()
+    endInteraction()
+
 
 def hello_view():
     return 'Hello world!'
@@ -210,12 +215,7 @@ class PublisherTestCase(unittest.TestCase):
     layer = ZCMLLayer(infrae.wsgi)
 
     def setUp(self):
-        class WSGIApplication(object):
-            transaction = MockTransactionManager()
-            application = MockApplication()
-            response = MockWSGIStartResponse()
-
-        self.app = WSGIApplication()
+        self.app = MockApplication()
         self.response = WSGIResponse(DEFAULT_ENVIRON.copy(), self.app.response)
 
     def new_request_for(self, method):
@@ -234,7 +234,7 @@ class PublisherTestCase(unittest.TestCase):
         request = self.new_request_for(hello_view)
         with LoggingTesting('infrae.wsgi') as logs:
             publication = WSGIPublication(self.app, request, self.response)
-            result = publication(lambda: request.close())
+            result = publication(lambda: cleanup(request))
 
             self.assertEqual(
                 request.mocker_called(),
@@ -276,7 +276,7 @@ class PublisherTestCase(unittest.TestCase):
         request = self.new_request_for(no_content_view)
         with LoggingTesting('infrae.wsgi') as logs:
             publication = WSGIPublication(self.app, request, self.response)
-            result = publication(lambda: request.close())
+            result = publication(lambda: cleanup(request))
 
             self.assertEqual(
                 request.mocker_called(),
@@ -319,7 +319,7 @@ class PublisherTestCase(unittest.TestCase):
         request = self.new_request_for(result_view)
         with LoggingTesting('infrae.wsgi') as logs:
             publication = WSGIPublication(self.app, request, self.response)
-            result = publication(lambda: request.close())
+            result = publication(lambda: cleanup(request))
 
 
             self.assertEqual(
@@ -366,7 +366,7 @@ class PublisherTestCase(unittest.TestCase):
         request = self.new_request_for(bugous_result_view)
         with LoggingTesting('infrae.wsgi') as logs:
             publication = WSGIPublication(self.app, request, self.response)
-            result = publication(lambda: request.close())
+            result = publication(lambda: cleanup(request))
 
             self.assertEqual(
                 request.mocker_called(),
@@ -413,7 +413,7 @@ class PublisherTestCase(unittest.TestCase):
 
         request = self.new_request_for(result_view)
         publication = WSGIPublication(self.app, request, self.response)
-        result = publication(lambda: request.close())
+        result = publication(lambda: cleanup(request))
 
         self.assertEqual(
             request.mocker_called(),
@@ -458,7 +458,7 @@ class PublisherTestCase(unittest.TestCase):
         """
         request = self.new_request_for(streamiterator_view)
         publication = WSGIPublication(self.app, request, self.response)
-        result = publication(lambda: request.close())
+        result = publication(lambda: cleanup(request))
 
         self.assertEqual(
             request.mocker_called(),
@@ -501,7 +501,7 @@ class PublisherTestCase(unittest.TestCase):
         """
         request = self.new_request_for(bugous_streamiterator_view)
         publication = WSGIPublication(self.app, request, self.response)
-        result = publication(lambda: request.close())
+        result = publication(lambda: cleanup(request))
 
         self.assertEqual(
             request.mocker_called(),
@@ -544,7 +544,7 @@ class PublisherTestCase(unittest.TestCase):
 
         request = self.new_request_for(streamiterator_view)
         publication = WSGIPublication(self.app, request, self.response)
-        result = publication(lambda: request.close())
+        result = publication(lambda: cleanup(request))
 
         self.assertEqual(
             request.mocker_called(),
@@ -587,7 +587,7 @@ class PublisherTestCase(unittest.TestCase):
         request = self.new_request_for(bugous_view)
         with LoggingTesting('infrae.wsgi') as logs:
             publication = WSGIPublication(self.app, request, self.response)
-            result = publication(lambda: request.close())
+            result = publication(lambda: cleanup(request))
 
             self.assertEqual(
                 request.mocker_called(),
@@ -621,7 +621,31 @@ class PublisherTestCase(unittest.TestCase):
                 self.app.transaction.mocker_called(), [])
             self.assertEqual(
                 get_event_names(), [])
+            # The error have been logged
+            logs.assertNotEmpty()
 
+    def test_bugous_view_debug_exceptions(self):
+        """Test a view which does a not found exception, and
+        debug_exceptions is true.
+        """
+        self.app.debug_exceptions = True
+        request = self.new_request_for(bugous_view)
+        with LoggingTesting('infrae.wsgi') as logs:
+            publication = WSGIPublication(self.app, request, self.response)
+            with self.assertRaises(ValueError):
+                publication(lambda: cleanup(request))
+
+            # Be sure the request is closed and the transaction abort.
+            self.assertEqual(
+                request.mocker_called(),
+                [('processInputs', (), {}),
+                 ('close', (), {})])
+            self.assertEqual(
+                self.app.transaction.mocker_called(),
+                [('begin', (), {}),
+                 ('recordMetaData', (bugous_view, request), {}),
+                 ('abort', (), {})])
+            # The error have been logged
             logs.assertNotEmpty()
 
     def test_invalid_view(self):
@@ -630,7 +654,7 @@ class PublisherTestCase(unittest.TestCase):
         request = self.new_request_for(invalid_view)
         with LoggingTesting('infrae.wsgi') as logs:
             publication = WSGIPublication(self.app, request, self.response)
-            result = publication(lambda: request.close())
+            result = publication(lambda: cleanup(request))
 
             self.assertEqual(
                 request.mocker_called(),
@@ -671,7 +695,7 @@ class PublisherTestCase(unittest.TestCase):
         """
         request = self.new_request_for(not_found_view)
         publication = WSGIPublication(self.app, request, self.response)
-        result = publication(lambda: request.close())
+        result = publication(lambda: cleanup(request))
 
         self.assertEqual(
             request.mocker_called(),
@@ -705,12 +729,33 @@ class PublisherTestCase(unittest.TestCase):
         self.assertEqual(
             get_event_names(), [])
 
+    def test_not_found_debug_exceptions(self):
+        """Test a view which does a not found exception, and
+        debug_exceptions is true.
+        """
+        self.app.debug_exceptions = True
+        request = self.new_request_for(not_found_view)
+        publication = WSGIPublication(self.app, request, self.response)
+        with self.assertRaises(zExceptions.NotFound):
+            publication(lambda: cleanup(request))
+
+        # Request is processed and closed, transaction aborted.
+        self.assertEqual(
+            request.mocker_called(),
+            [('processInputs', (), {}),
+             ('close', (), {})])
+        self.assertEqual(
+            self.app.transaction.mocker_called(),
+            [('begin', (), {}),
+             ('recordMetaData', (not_found_view, request), {}),
+             ('abort', (), {})])
+
     def test_redirect(self):
         """Test a view which raise a Redirect exception.
         """
         request = self.new_request_for(redirect_view)
         publication = WSGIPublication(self.app, request, self.response)
-        result = publication(lambda: request.close())
+        result = publication(lambda: cleanup(request))
 
         self.assertEqual(
             request.mocker_called(),
@@ -747,7 +792,7 @@ class PublisherTestCase(unittest.TestCase):
         """
         request = self.new_request_for(unauthorized_view)
         publication = WSGIPublication(self.app, request, self.response)
-        result = publication(lambda: request.close())
+        result = publication(lambda: cleanup(request))
 
         self.assertEqual(
             request.mocker_called(),
@@ -787,7 +832,7 @@ class PublisherTestCase(unittest.TestCase):
             response = WSGIResponse({}, self.app.response)
             response._unauthorized = bugous_view # Set the bugous handler
             publication = WSGIPublication(self.app, request, response)
-            result = publication(lambda: request.close())
+            result = publication(lambda: cleanup(request))
 
             self.assertEqual(
                 request.mocker_called(),
@@ -827,7 +872,7 @@ class PublisherTestCase(unittest.TestCase):
         """
         request = self.new_request_for(forbidden_view)
         publication = WSGIPublication(self.app, request, self.response)
-        result = publication(lambda: request.close())
+        result = publication(lambda: cleanup(request))
 
         self.assertEqual(
             request.mocker_called(),
@@ -870,7 +915,7 @@ class PublisherTestCase(unittest.TestCase):
         with LoggingTesting('infrae.wsgi') as logs:
 
             publication = WSGIPublication(self.app, request, self.response)
-            body = consume_wsgi_result(publication(lambda: request.close()))
+            body = consume_wsgi_result(publication(lambda: cleanup(request)))
 
             self.assertEqual(
                 self.app.transaction.mocker_called(),
@@ -926,7 +971,7 @@ class PublisherTestCase(unittest.TestCase):
         request = self.new_request_for(hello_view)
 
         publication = WSGIPublication(self.app, request, self.response)
-        body = consume_wsgi_result(publication(lambda: request.close()))
+        body = consume_wsgi_result(publication(lambda: cleanup(request)))
 
         self.assertEqual(
             request.mocker_called(),
@@ -969,7 +1014,7 @@ class PublisherTestCase(unittest.TestCase):
 
         request = self.new_request_for(not_so_conflictuous_view)
         publication = WSGIPublication(self.app, request, self.response)
-        body = consume_wsgi_result(publication(lambda: request.close()))
+        body = consume_wsgi_result(publication(lambda: cleanup(request)))
 
         self.assertEqual(
             request.mocker_called(),

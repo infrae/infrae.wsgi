@@ -88,7 +88,7 @@ class MockTransactionManager(Mocker):
             raise ConflictError()
 
 
-class MockApplication(ExtensionClass.Base, Acquisition.Implicit):
+class MockRoot(ExtensionClass.Base, Acquisition.Implicit):
     """Mockup Application.
     """
 
@@ -144,3 +144,14 @@ class MockRequest(Mocker):
 
     def get_plugin(self, iface):
         return None
+
+
+class MockApplication(object):
+    """Mock an application.
+    """
+
+    def __init__(self, debug_exceptions=False):
+        self.debug_exceptions = debug_exceptions
+        self.transaction = MockTransactionManager()
+        self.response = MockWSGIStartResponse()
+        self.root = MockRoot()

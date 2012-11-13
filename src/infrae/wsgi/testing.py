@@ -17,7 +17,7 @@ from transaction import commit
 from infrae.testing import Zope2Layer, suite_from_package, TestCase
 from infrae.wsgi.interfaces import ITestRequest
 from infrae.wsgi.publisher import WSGIApplication, WSGIRequest, WSGIResponse
-from infrae.wsgi.tests.mockers import MockApplication
+from infrae.wsgi.tests.mockers import MockRoot
 from infrae.wsgi.utils import split_path_info
 from wsgi_intercept.mechanize_intercept import Browser as BaseInterceptBrowser
 from zope.interface import implements, alsoProvides
@@ -334,7 +334,7 @@ class TestRequest(WSGIRequest):
             environ,
             WSGIResponse(environ, lambda status, headers: None, debug))
         if application is None:
-            application = MockApplication()
+            application = MockRoot()
         else:
             application = aq_base(application.getPhysicalRoot())
         self.application = application.__of__(RequestContainer(REQUEST=self))
