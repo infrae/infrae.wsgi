@@ -15,6 +15,7 @@ from five import grok
 import App.config
 
 from infrae.wsgi.utils import reconstruct_url_from_environ
+from raven.utils.wsgi import get_headers, get_environ
 
 logger = logging.getLogger('infrae.wsgi')
 
@@ -135,36 +136,61 @@ class ErrorReporter(object):
         error_name = error.__class__.__name__
         return error_name not in self.__ignore_errors
 
+    def log_raven_error(self, request, response, obj=None,
+                        exc_info=None):
+        raven_client = request.environ.get('raven.client')
+        if raven_client is not None:
+            raven_client.captureException(exc_info=exc_info, data={
+                'sentry.interfaces.Http': {
+                    'url': request.get('URL', 'n/a'),
+                    'method': request.environ.get('REQUEST_METHOD', 'n/a'),
+                    'query_string': request.environ.get('QUERY_STRING'),
+                    'headers': dict(get_headers(request.environ)),
+                    'env': dict(get_environ(request.environ))
+                }
+            }, extra={
+                'Object Class': object_name(obj),
+                'Object Name': object_path(obj)
+            })
+
     def log_last_error(self, request, response, obj=None, extra=None):
         """Build an error report and log the last available error.
         """
         error_type, error_value, traceback = sys.exc_info()
-        if ((not response.debug_mode) and
-            (not self.is_loggable(error_value))):
-            return
+        try:
+            if ((not response.debug_mode) and
+                (not self.is_loggable(error_value))):
+                return
 
-        log_entry = ['\n']
+            self.log_raven_error(request, response, obj=obj,
+                exc_info=(error_type, error_value, traceback))
 
-        if extra is not None:
-            log_entry.append(extra + '\n')
+            log_entry = ['\n']
 
-        if obj is not None:
-            log_entry.append('Object class: %s\n' % object_name(obj))
-            log_entry.append('Object path: %s\n' % object_path(obj))
+            if extra is not None:
+                log_entry.append(extra + '\n')
 
-        def log_request_info(title, key):
-            value = request.get(key, 'n/a') or 'n/a'
-            log_entry.append('%s: %s\n' % (title, value))
+            if obj is not None:
+                log_entry.append('Object class: %s\n' % object_name(obj))
+                log_entry.append('Object path: %s\n' % object_path(obj))
 
-        log_request_info('Request URL', 'URL')
-        log_request_info('Request method', 'method')
-        log_request_info('Query string', 'QUERY_STRING')
-        log_request_info('User', 'AUTHENTICATED_USER')
-        log_request_info('User-agent', 'HTTP_USER_AGENT')
-        log_request_info('Refer', 'HTTP_REFERER')
+            def log_request_info(title, key):
+                value = request.get(key, 'n/a') or 'n/a'
+                log_entry.append('%s: %s\n' % (title, value))
 
-        log_entry.extend(format_exception(error_type, error_value, traceback))
-        self.log_error(request['URL'], ''.join(log_entry))
+            log_request_info('Request URL', 'URL')
+            log_request_info('Request method', 'method')
+            log_request_info('Query string', 'QUERY_STRING')
+            log_request_info('User', 'AUTHENTICATED_USER')
+            log_request_info('User-agent', 'HTTP_USER_AGENT')
+            log_request_info('Refer', 'HTTP_REFERER')
+
+            log_entry.extend(format_exception(error_type, error_value, traceback))
+            self.log_error(request['URL'], ''.join(log_entry))
+        finally:
+            # del traceback
+            import gc; gc.collect();
+            pass
 
     def log_error(self, url, report):
         """Log a given error.

@@ -103,9 +103,17 @@ def boot_zope(config_filename, debug_mode=False):
     finally:
         bootstrap_lock.release()
 
+def parse_raven_config(options):
+    config = configuration_dict(options, 'raven', sep=".")
+    for key in ['exclude_paths', 'include_paths', 'processors']:
+        if key in config:
+            config[key] = configuration_list(config[key])
+    return config
+
 def zope2_application_factory(global_conf, zope_conf, **options):
     """Build a Zope2 WSGI application.
     """
+    raven_config = parse_raven_config(options)
     debug_mode = options.get('debug_mode', 'off') == 'on'
     zope_workers = configuration_int(options, 'zope_workers')
     boot_zope(zope_conf, debug_mode)
@@ -129,9 +137,19 @@ def zope2_application_factory(global_conf, zope_conf, **options):
         Zope2.zpublisher_transactions_manager,
         debug_mode,
         debug_exceptions,
-        zope_workers)
+        zope_workers,
+        raven_config)
 
 # Utilities to read configuration options
+
+def configuration_dict(options, key, sep="."):
+    key_sep = key + sep
+    result = {}
+    for key, value in options.iteritems():
+        if key.startswith(key_sep):
+            prefix, result_key = key.split(sep, 1)
+            result[result_key] = value
+    return result
 
 def configuration_list(options, key, default=''):
     return filter(lambda value: value,

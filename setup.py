@@ -40,14 +40,15 @@ setup(name='infrae.wsgi',
       install_requires=[
         'Zope2 >= 2.12.4',
         'five.grok',
+        'raven',
         'setuptools',
+        'zope.cachedescriptors',
+        'zope.component',
         'zope.event',
         'zope.interface',
-        'zope.cachedescriptors',
+        'zope.processlifetime',
         'zope.publisher',
         'zope.security',
-        'zope.component',
-        'zope.processlifetime'
         ],
       entry_points={
         'paste.app_factory': [

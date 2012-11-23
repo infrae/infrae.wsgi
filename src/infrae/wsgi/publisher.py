@@ -7,6 +7,7 @@ from tempfile import TemporaryFile
 from urllib import quote
 import socket
 import threading
+import raven
 
 from zope.cachedescriptors.property import Lazy
 
@@ -230,7 +231,7 @@ class WSGIPublication(object):
                 notify(interfaces.PublicationAfterRender(
                         self.request, error_view))
 
-            except Exception as error:
+            except Exception:
                 log_last_error(
                     self.request, self.response, obj=last_known_obj,
                     extra=u"Error while rendering error message")
@@ -439,13 +440,16 @@ class WSGIApplication(object):
 
     def __init__(self, root, transaction,
                  debug_mode=False, debug_exceptions=True,
-                 concurrency=4):
+                 concurrency=4, raven_config=None):
         self.root = root
         self.transaction = transaction
         self.memory_maxsize = 2 << 20
         self.debug_mode = debug_mode
         self.debug_exceptions = debug_exceptions
         self.concurrency = threading.Semaphore(concurrency)
+        self.raven_client = None
+        if raven_config:
+            self.raven_client = raven.Client(**raven_config)
 
     def save_input(self, environ):
         """We want to save the request input in order to be able to
@@ -483,6 +487,8 @@ class WSGIApplication(object):
         """
         try:
             self.save_input(environ)
+            if self.raven_client is not None:
+                environ['raven.client'] = self.raven_client
             response = WSGIResponse(environ, start_response, self.debug_mode)
             request = WSGIRequest(environ['wsgi.input'], environ, response)
             publication = WSGIPublication(self, request, response)

@@ -77,6 +77,8 @@ Errors are logged with useful information:
 The error log can be accessible online via ``/errorlog.html`` on any
 Zope 2 content.
 
+Errors can also be sent to a Sentry service (see Paste Deploy section).
+
 The error log ignores certain errors by default: NotFound, Redirect,
 Unauthorized, Forbidden, BadRequest, BrokenReferenceError.  The errlog.html page
 has a form configure some (or all) of these errors to not be ignored.  This is
@@ -117,9 +119,16 @@ The option ``show_errors`` accepts a comma-separated list of
 errors which will not be ignored. This overrides the default list of
 ignored errors (see the Errors section, above)
 
-The option ``ignore_errors`` acceepts a comma-separated list of errors
+The option ``ignore_errors`` accepts a comma-separated list of errors
 which will be ignored. This overrides the default list of ignored
 errors too.
+
+The configuration accept option for raven (sentry's client):
+
+  raven.dsn = http://public:secret@example.com/1
+  raven.include_paths = my.package, my.other.package
+  raven.exclude_paths = my.package.crud
+
 
 Virtual Hosting
 ---------------
