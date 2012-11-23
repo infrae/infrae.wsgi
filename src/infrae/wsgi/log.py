@@ -144,7 +144,7 @@ class ErrorReporter(object):
                 'sentry.interfaces.Http': {
                     'url': request.get('URL', 'n/a'),
                     'method': request.environ.get('REQUEST_METHOD', 'n/a'),
-                    'query_string': request.environ.get('QUERY_STRING'),
+                    'query_string': request.environ.get('QUERY_STRING', 'n/a'),
                     'headers': dict(get_headers(request.environ)),
                     'env': dict(get_environ(request.environ))
                 }
