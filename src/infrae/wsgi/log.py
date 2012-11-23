@@ -188,9 +188,7 @@ class ErrorReporter(object):
             log_entry.extend(format_exception(error_type, error_value, traceback))
             self.log_error(request['URL'], ''.join(log_entry))
         finally:
-            # del traceback
-            import gc; gc.collect();
-            pass
+            del traceback
 
     def log_error(self, url, report):
         """Log a given error.
