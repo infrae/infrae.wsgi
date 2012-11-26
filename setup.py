@@ -40,7 +40,6 @@ setup(name='infrae.wsgi',
       install_requires=[
         'Zope2 >= 2.12.4',
         'five.grok',
-        'raven',
         'setuptools',
         'zope.cachedescriptors',
         'zope.component',

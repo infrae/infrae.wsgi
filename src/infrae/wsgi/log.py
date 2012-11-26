@@ -12,10 +12,8 @@ from zExceptions.ExceptionFormatter import format_exception
 from zope.browser.interfaces import IView
 from zope.interface import Interface
 from five import grok
-import App.config
 
 from infrae.wsgi.utils import reconstruct_url_from_environ
-from raven.utils.wsgi import get_headers, get_environ
 
 logger = logging.getLogger('infrae.wsgi')
 
@@ -96,9 +94,13 @@ class ErrorReporter(object):
         'Unauthorized', 'Forbidden',
         'BadRequest', 'BrokenReferenceError']
 
-    def __init__(self):
+    def __init__(self, plugins=[]):
         self.__last_errors = collections.deque([], 25)
         self.__ignore_errors = set(self.all_ignored_errors)
+        self.__plugins = plugins
+
+    def register_plugin(self, plugin):
+        self.__plugins.append(plugin)
 
     def show_errors(self, errors):
         """Show the given errors.
@@ -136,34 +138,20 @@ class ErrorReporter(object):
         error_name = error.__class__.__name__
         return error_name not in self.__ignore_errors
 
-    def log_raven_error(self, request, response, obj=None,
-                        exc_info=None):
-        raven_client = request.environ.get('raven.client')
-        if raven_client is not None:
-            raven_client.captureException(exc_info=exc_info, data={
-                'sentry.interfaces.Http': {
-                    'url': request.get('URL', 'n/a'),
-                    'method': request.environ.get('REQUEST_METHOD', 'n/a'),
-                    'query_string': request.environ.get('QUERY_STRING', 'n/a'),
-                    'headers': dict(get_headers(request.environ)),
-                    'env': dict(get_environ(request.environ))
-                }
-            }, extra={
-                'Object Class': object_name(obj),
-                'Object Name': object_path(obj)
-            })
-
     def log_last_error(self, request, response, obj=None, extra=None):
         """Build an error report and log the last available error.
         """
-        error_type, error_value, traceback = sys.exc_info()
+        error_type, error_value, traceback = exc_info = sys.exc_info()
         try:
             if ((not response.debug_mode) and
                 (not self.is_loggable(error_value))):
                 return
 
-            self.log_raven_error(request, response, obj=obj,
-                exc_info=(error_type, error_value, traceback))
+            formatted_exception = \
+                format_exception(error_type, error_value, traceback)
+
+            for plugin in self.__plugins:
+                plugin(request, response, obj, exc_info, formatted_exception)
 
             log_entry = ['\n']
 
@@ -185,7 +173,7 @@ class ErrorReporter(object):
             log_request_info('User-agent', 'HTTP_USER_AGENT')
             log_request_info('Refer', 'HTTP_REFERER')
 
-            log_entry.extend(format_exception(error_type, error_value, traceback))
+            log_entry.extend(formatted_exception)
             self.log_error(request['URL'], ''.join(log_entry))
         finally:
             del traceback

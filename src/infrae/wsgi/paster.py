@@ -108,12 +108,15 @@ def parse_raven_config(options):
     for key in ['exclude_paths', 'include_paths', 'processors']:
         if key in config:
             config[key] = configuration_list(config[key])
-    return config
+    if config:
+        from .ravenplugin import RavenLoggingPlugin
+        reporter.register_plugin(RavenLoggingPlugin(config))
 
 def zope2_application_factory(global_conf, zope_conf, **options):
     """Build a Zope2 WSGI application.
     """
-    raven_config = parse_raven_config(options)
+    parse_raven_config(options)
+
     debug_mode = options.get('debug_mode', 'off') == 'on'
     zope_workers = configuration_int(options, 'zope_workers')
     boot_zope(zope_conf, debug_mode)
@@ -137,8 +140,7 @@ def zope2_application_factory(global_conf, zope_conf, **options):
         Zope2.zpublisher_transactions_manager,
         debug_mode,
         debug_exceptions,
-        zope_workers,
-        raven_config)
+        zope_workers)
 
 # Utilities to read configuration options
 
