@@ -110,7 +110,7 @@ def parse_raven_config(options):
             config[key] = configuration_list(config[key])
     if config:
         from .ravenplugin import RavenLoggingPlugin
-        reporter.register_plugin(RavenLoggingPlugin(config))
+        reporter.subscribe_to_errors(RavenLoggingPlugin(config))
 
 def zope2_application_factory(global_conf, zope_conf, **options):
     """Build a Zope2 WSGI application.

@@ -94,13 +94,44 @@ class ErrorReporter(object):
         'Unauthorized', 'Forbidden',
         'BadRequest', 'BrokenReferenceError']
 
-    def __init__(self, plugins=[]):
+    def __init__(self, subscribed=[]):
         self.__last_errors = collections.deque([], 25)
         self.__ignore_errors = set(self.all_ignored_errors)
-        self.__plugins = plugins
+        self.__subscribed = list(subscribed) + [self._subscriber]
 
-    def register_plugin(self, plugin):
-        self.__plugins.append(plugin)
+    def _subscriber(self, request, response, obj, exc_info, exc_text, extra):
+        log_entry = ['\n']
+
+        if extra is not None:
+            log_entry.append(extra + '\n')
+
+        if obj is not None:
+            log_entry.append('Object class: %s\n' % object_name(obj))
+            log_entry.append('Object path: %s\n' % object_path(obj))
+
+        def log_request_info(title, key):
+            value = request.get(key, 'n/a') or 'n/a'
+            log_entry.append('%s: %s\n' % (title, value))
+
+        log_request_info('Request URL', 'URL')
+        log_request_info('Request method', 'method')
+        log_request_info('Query string', 'QUERY_STRING')
+        log_request_info('User', 'AUTHENTICATED_USER')
+        log_request_info('User-agent', 'HTTP_USER_AGENT')
+        log_request_info('Refer', 'HTTP_REFERER')
+
+        log_entry.extend(exc_text)
+
+        # Save error.
+        report = ''.join(log_entry)
+        logger.error(report)
+        self.__last_errors.append(
+            {'url': request['URL'], 'report': report, 'time': datetime.now()})
+
+    def subscribe_to_errors(self, handler):
+        """Subscribe when an error happens.
+        """
+        self.__subscribed.append(handler)
 
     def show_errors(self, errors):
         """Show the given errors.
@@ -125,13 +156,6 @@ class ErrorReporter(object):
 
         return property(getter, setter)
 
-    def get_last_errors(self):
-        """Return all last errors.
-        """
-        errors = list(self.__last_errors)
-        errors.reverse()
-        return errors
-
     def is_loggable(self, error):
         """Tells you if this error is loggable.
         """
@@ -147,43 +171,19 @@ class ErrorReporter(object):
                 (not self.is_loggable(error_value))):
                 return
 
-            formatted_exception = \
-                format_exception(error_type, error_value, traceback)
+            exc_text = format_exception(error_type, error_value, traceback)
 
-            for plugin in self.__plugins:
-                plugin(request, response, obj, exc_info, formatted_exception)
-
-            log_entry = ['\n']
-
-            if extra is not None:
-                log_entry.append(extra + '\n')
-
-            if obj is not None:
-                log_entry.append('Object class: %s\n' % object_name(obj))
-                log_entry.append('Object path: %s\n' % object_path(obj))
-
-            def log_request_info(title, key):
-                value = request.get(key, 'n/a') or 'n/a'
-                log_entry.append('%s: %s\n' % (title, value))
-
-            log_request_info('Request URL', 'URL')
-            log_request_info('Request method', 'method')
-            log_request_info('Query string', 'QUERY_STRING')
-            log_request_info('User', 'AUTHENTICATED_USER')
-            log_request_info('User-agent', 'HTTP_USER_AGENT')
-            log_request_info('Refer', 'HTTP_REFERER')
-
-            log_entry.extend(formatted_exception)
-            self.log_error(request['URL'], ''.join(log_entry))
+            for plugin in self.__subscribed:
+                plugin(request, response, obj, exc_info, exc_text, extra)
         finally:
             del traceback
 
-    def log_error(self, url, report):
-        """Log a given error.
+    def get_last_errors(self):
+        """Return all last errors.
         """
-        logger.error(report)
-        self.__last_errors.append(
-            {'url': url, 'report': report, 'time': datetime.now()})
+        errors = list(self.__last_errors)
+        errors.reverse()
+        return errors
 
 
 reporter = ErrorReporter()
