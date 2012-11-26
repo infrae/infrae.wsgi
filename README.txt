@@ -123,7 +123,7 @@ The option ``ignore_errors`` accepts a comma-separated list of errors
 which will be ignored. This overrides the default list of ignored
 errors too.
 
-The configuration accept option for raven (sentry's client):
+The configuration accepts options for raven (sentry's client):
 
   raven.dsn = http://public:secret@example.com/1
   raven.include_paths = my.package, my.other.package
