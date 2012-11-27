@@ -5,6 +5,6 @@
   <include package="five.grok" />
 
   <!-- Grok this package -->
-  <grok:grok package="." />
+  <grok:grok package="." exclude="ravenplugin" />
 
 </configure>
