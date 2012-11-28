@@ -1,6 +1,10 @@
 <configure
-   xmlns="http://namespaces.zope.org/zope">
+   xmlns="http://namespaces.zope.org/zope"
+   xmlns:grok="http://namespaces.zope.org/grok">
 
   <include package="infrae.wsgi" />
+
+  <!-- Grok fixtures -->
+  <grok:grok package=".tests.fixtures" />
 
 </configure>

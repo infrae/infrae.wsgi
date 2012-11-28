@@ -6,13 +6,15 @@ import unittest
 
 import infrae.wsgi
 from infrae.wsgi.testing import BrowserLayer, Browser
+from infrae.testing import get_event_names
+from zope.security.management import queryInteraction
 
 
-class InfraeWSGILayer(BrowserLayer):
+class WSGILayer(BrowserLayer):
     default_users = {'admin': ['Manager']}
 
 
-FunctionalLayer = InfraeWSGILayer(infrae.wsgi)
+FunctionalLayer = WSGILayer(infrae.wsgi)
 
 
 class FunctionalTestCase(unittest.TestCase):
@@ -24,15 +26,34 @@ class FunctionalTestCase(unittest.TestCase):
         self.browser = Browser()
         self.browser.handleErrors = True
         self.browser.raiseHttpErrors = False
+        get_event_names()       # Clear setup events
 
     def test_default_view(self):
         self.browser.open('http://localhost')
         self.assertEqual(self.browser.title, 'Zope QuickStart')
         self.assertEqual(self.browser.status, '200 OK')
+        self.assertEqual(
+            get_event_names(),
+            ['PublicationStart',
+             'PublicationAfterTraversal',
+             'PublicationAfterRender',
+             'PublicationBeforeCommit',
+             'PublicationSuccess',
+             'EndRequestEvent'])
+        self.assertIs(queryInteraction(), None)
 
     def test_notfound_view(self):
         self.browser.open('http://localhost/nowhere')
         self.assertEqual(self.browser.status, '404 Not Found')
+        self.assertEqual(
+            get_event_names(),
+            ['PublicationStart',
+             'PublicationBeforeError',
+             'PublicationAfterRender',
+             'PublicationBeforeAbort',
+             'PublicationFailure',
+             'EndRequestEvent'])
+        self.assertIs(queryInteraction(), None)
 
     def test_debug_view(self):
         # You must be authenticated to access the debug view.
@@ -46,10 +67,38 @@ class FunctionalTestCase(unittest.TestCase):
         # You must be authenticated to access the log view.
         self.browser.open('http://localhost/errorlog.html')
         self.assertEqual(self.browser.status, '401 Unauthorized')
+        self.assertEqual(
+            get_event_names(),
+            ['PublicationStart',
+             'PublicationBeforeCommit',
+             'PublicationSuccess',
+             'EndRequestEvent'])
+        self.assertIs(queryInteraction(), None)
+
         self.browser.addHeader('Authorization', 'Basic admin:admin')
         self.browser.reload()
         self.assertEqual(self.browser.status, '200 OK')
+        self.assertEqual(
+            get_event_names(),
+            ['PublicationStart',
+             'PublicationAfterTraversal',
+             'PublicationAfterRender',
+             'PublicationBeforeCommit',
+             'PublicationSuccess',
+             'EndRequestEvent'])
+        self.assertIs(queryInteraction(), None)
 
+    def test_abort(self):
+        self.browser.open('http://localhost/abort.html')
+        self.assertEqual(self.browser.status, '400 Bad Request')
+        self.assertEqual(
+            get_event_names(),
+            ['PublicationStart',
+             'PublicationAfterTraversal',
+             'PublicationBeforeAbort',
+             'PublicationFailure',
+             'EndRequestEvent'])
+        self.assertIs(queryInteraction(), None)
 
 def test_suite():
     suite = unittest.TestSuite()

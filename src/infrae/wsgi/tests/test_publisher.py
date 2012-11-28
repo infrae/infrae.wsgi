@@ -39,30 +39,23 @@ def cleanup(request):
 def hello_view():
     return 'Hello world!'
 
-
 def no_content_view():
     return u''
-
 
 def bugous_view():
     raise ValueError("I am not happy")
 
-
 def invalid_view():
     return object()
-
 
 def not_found_view():
     raise zExceptions.NotFound("I am not here!")
 
-
 def redirect_view():
     raise zExceptions.Redirect("http://infrae.com/products/silva")
 
-
 def unauthorized_view():
     raise zExceptions.Unauthorized("Please authenticate")
-
 
 def forbidden_view():
     raise zExceptions.Forbidden("Go away")
@@ -137,10 +130,8 @@ class TestStreamIterator(object):
 def streamiterator_view():
     return TestStreamIterator(['It\'s the ', 'world.'], 42)
 
-
 def bugous_streamiterator_view():
     return TestStreamIterator(['It\'s the ', 'world.'], 42, fail=True)
-
 
 def consume_wsgi_result(iterator):
     result = ''
