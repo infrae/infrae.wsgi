@@ -429,7 +429,8 @@ class WSGIPublication(object):
             # In case of exception we didn't catch (like
             # AbortPublication), abort all the current transaction.
             self.abort()
-            cleanup()
+            if cleanup is not None:
+                cleanup()
             raise
 
 

@@ -100,6 +100,38 @@ class FunctionalTestCase(unittest.TestCase):
              'EndRequestEvent'])
         self.assertIs(queryInteraction(), None)
 
+    def test_conflict(self):
+        self.browser.open('http://localhost/conflict.html')
+        self.assertEqual(self.browser.status, '503 Service Unavailable')
+        self.assertEqual(
+            get_event_names(),
+            ['PublicationStart',
+             'PublicationAfterTraversal',
+             'PublicationBeforeAbort',
+             'PublicationFailure'] * 4 +
+            ['EndRequestEvent'] * 4)
+        self.assertIs(queryInteraction(), None)
+
+    def test_failed_conflict(self):
+        self.browser.open('http://localhost/failed_conflict.html')
+        self.assertEqual(self.browser.status, '500 Internal Server Error')
+        self.assertEqual(
+            get_event_names(),
+            ['PublicationStart',
+             'PublicationAfterTraversal',
+             'PublicationBeforeAbort',
+             'PublicationFailure',
+             'PublicationStart',
+             'PublicationAfterTraversal',
+             'PublicationBeforeError',
+             'PublicationAfterRender',
+             'PublicationBeforeAbort',
+             'PublicationFailure',
+             'EndRequestEvent',
+             'EndRequestEvent'])
+        self.assertIs(queryInteraction(), None)
+
+
 def test_suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(FunctionalTestCase))

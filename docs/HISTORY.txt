@@ -1,16 +1,19 @@
 Changes
 =======
 
-2.1 (unreleased)
+2.1 (2012-12-10)
 ----------------
 
-- Added paster option debug_propagates_exceptions, defauling to 'on', which
-  when in debug mode and set to 'off' will NOT propagate exceptions up the
-  wsgi middleware stack.
-  
-- Added paster option ignore_errors_override, which accepts a comma-separated
-  list of the exception names which are ignored by default.  When present in
-  this list, these exceptions will NOT be ignored.
+- In paster, the propagations of errors in the stack can be disabled
+  with ``debug_exceptions``, if you set it to ``off``. This option
+  only has an effect if ``debug_mode`` is activated.
+
+- In paster, the list of default errors that are ignored in the log
+  can be customized by both options ``show_errors`` and
+  ``ignore_errors``.
+
+- Add a plugin to log errors in Sentry (this requires raven to be
+  installed).
 
 2.0.1 (2012-09-19)
 ------------------

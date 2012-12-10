@@ -1,4 +1,5 @@
 
+from ZODB.POSException import ConflictError
 
 from five import grok
 from zope.interface import Interface
@@ -20,3 +21,21 @@ class AbortView(grok.View):
     def render(self):
         # This should only done by infrae.wsgi code.
         raise AbortPublication(False)
+
+
+class ConflictuousView(grok.View):
+    grok.context(Interface)
+    grok.name('conflict.html')
+
+    def render(self):
+        raise ConflictError()
+
+
+class ConflictAndErrorView(grok.View):
+    grok.context(Interface)
+    grok.name('failed_conflict.html')
+
+    def render(self):
+        if self.request.retry_count:
+            raise ValueError('Failed')
+        raise ConflictError()

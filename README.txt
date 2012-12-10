@@ -123,12 +123,13 @@ The option ``ignore_errors`` accepts a comma-separated list of errors
 which will be ignored. This overrides the default list of ignored
 errors too.
 
-The configuration accepts options for raven (sentry's client):
+The configuration accepts options for `Raven`_ (Sentry's client)::
 
   raven.dsn = http://public:secret@example.com/1
   raven.include_paths = my.package, my.other.package
   raven.exclude_paths = my.package.crud
 
+Those options requires `Raven`_ to be installed.
 
 Virtual Hosting
 ---------------
@@ -185,3 +186,4 @@ You will be actually able to test applications that do use streaming::
 
 
 .. _infrae.testing: http://pypi.python.org/pypi/infrae.testing
+.. _Raven: http://raven.readthedocs.org/en/latest/
