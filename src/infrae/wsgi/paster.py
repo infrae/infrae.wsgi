@@ -63,8 +63,11 @@ def mount_all_databases():
                 # Get the database.
                 # If it doesn't exist yet, it will be created.
                 config.dbtab.getDatabase(name=name)
-                root.unrestrictedTraverse(path)
-                logger.info("Mounted %s on %s" % (name, path))
+                try:
+                    root.unrestrictedTraverse(path)
+                    logger.info("Mounted %s on %s" % (name, path))
+                except KeyError:
+                    logger.info("Skipping mount %s on %s (traversal failed; possibly not set up yet." % (name, path))
             except AttributeError:
                 pass
     connection.close()
