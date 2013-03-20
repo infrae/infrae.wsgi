@@ -125,6 +125,8 @@ class MockRequest(Mocker):
         self.__data[key] = value
 
     def get(self, key, default=None):
+        if key == 'REQUEST':
+            return self
         return self.__data.get(key, default)
 
     def traverseName(self, path, name):

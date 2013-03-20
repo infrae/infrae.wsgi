@@ -210,32 +210,48 @@ class WSGIResponse(object):
 
         # If the body is an IResult, it is a case of streaming where
         # we don't fix headers.
-        stream = stream or IResult.providedBy(self.body)
+        if IResult.providedBy(self.body):
+            stream = True
 
         if not stream:
             # If we are not streaming, we try to set Content-Length,
             # Content-Type and adapt status if there is no content.
-            if not self.headers.has_key('Content-Length'):
-                content_length = None
-                if (isinstance(self.body, basestring) or
-                    IStreamIterator.providedBy(self.body)):
-                    content_length = len(self.body)
-                elif self.body is None:
-                    content_length = 0
-                if content_length is not None:
-                    self.headers['Content-Length'] = content_length
+            content_length = None
+            content_type = None
 
+            # Inspect content-length
             if self.headers.has_key('Content-Length'):
                 content_length = self.headers['Content-Length']
-                if not content_length and self.status == 200:
-                    # Set no content status if there is no content
-                    self.status = 204
+            else:
+                if (isinstance(self.body, basestring) or
+                    IStreamIterator.providedBy(self.body)):
+                    body_length = len(self.body)
+                    if body_length:
+                        content_length = str(body_length)
 
-            if not self.headers.has_key('Content-Type'):
-                if content_length:
-                    # If there is content and no Content-Type, set HTML
-                    self.headers['Content-Type'] = 'text/html;charset=%s' % (
-                        self.default_charset,)
+            # Inspect content-type
+            if self.headers.has_key('Content-Type'):
+                content_type = self.headers['Content-Type']
+
+            # Modify them
+            if content_length is None:
+                if content_type is None and self.status == 200:
+                    # No content length and content-type switch to 204.
+                    self.status = 204
+                if self.status not in (100, 100, 101, 102, 204, 304):
+                    content_length = '0'
+            if content_length is not None:
+                # If there is Content and no Content-Type, set HTML
+                if content_type is None and content_length != '0':
+                    content_type = 'text/html;charset={0}'.format(
+                        self.default_charset)
+
+            # Update content_length and content_type
+            if content_length is not None:
+                self.headers['Content-Length'] = content_length
+            if content_type is not None:
+                self.headers['Content-Type'] = content_type
+
         else:
             # Fire event before streaming
             notify(PublicationBeforeStreaming(self))
@@ -245,11 +261,12 @@ class WSGIResponse(object):
                 self.headers['Content-Type'] = 'text/html;charset=%s' % (
                     self.default_charset,)
 
-
         formatted_status = "%d %s" % (
             self.status, status_reasons.get(self.status, 'OK'))
         formatted_headers = self.headers.items() + format_cookies(self.cookies)
-        return self.__start_response(formatted_status, formatted_headers)
+        self.__write = self.__start_response(
+            formatted_status, formatted_headers)
+        return self.__write
 
     def getWSGIResponse(self):
         # This return a tuple (data_sent, data_to_send_to_WSGI)

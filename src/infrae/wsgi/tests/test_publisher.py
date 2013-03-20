@@ -39,7 +39,16 @@ def cleanup(request):
 def hello_view():
     return 'Hello world!'
 
+
+def not_modified_view(REQUEST):
+    REQUEST.response.setStatus(304)
+    return u''
+
 def no_content_view():
+    return u''
+
+def no_content_view_with_length(REQUEST):
+    REQUEST.response.setHeader('Content-Length', '300')
     return u''
 
 def bugous_view():
@@ -262,7 +271,9 @@ class PublisherTestCase(unittest.TestCase):
             logs.assertEmpty()
 
     def test_no_content(self):
-        """Test a working view with no content.
+        """Test a working view that return no content. Without
+        Content-Length or Content-Type it should set the HTTP status
+        to 204.
         """
         request = self.new_request_for(no_content_view)
         with LoggingTesting('infrae.wsgi') as logs:
@@ -279,9 +290,93 @@ class PublisherTestCase(unittest.TestCase):
                  ('commit', (), {})])
             self.assertEqual(
                 self.app.response.status, '204 No Content')
+            self.assertNotIn('Content-Length', self.app.response.headers)
+            self.assertEqual(
+                get_event_names(),
+                ['PublicationStart',
+                 'PublicationAfterTraversal',
+                 'PublicationAfterRender',
+                 'PublicationBeforeCommit',
+                 'PublicationSuccess'])
+
+            body = consume_wsgi_result(result)
+
+            self.assertEqual(body, '')
+            self.assertEqual(
+                request.mocker_called(),  [('close', (), {})])
+            self.assertEqual(
+                self.app.transaction.mocker_called(), [])
+            self.assertEqual(
+                get_event_names(), [])
+
+            logs.assertEmpty()
+
+    def test_no_content_view_with_length(self):
+        """Test a view that return no content, but set
+        Content-Length. The HTTP status should be perserved to 200,
+        and the missing Content-Type should be set.
+        """
+        request = self.new_request_for(no_content_view_with_length)
+        with LoggingTesting('infrae.wsgi') as logs:
+            publication = WSGIPublication(self.app, request, self.response)
+            result = publication(lambda: cleanup(request))
+
+            self.assertEqual(
+                request.mocker_called(),
+                [('processInputs', (), {})])
+            self.assertEqual(
+                self.app.transaction.mocker_called(),
+                [('begin', (), {}),
+                 ('recordMetaData', (no_content_view_with_length, request), {}),
+                 ('commit', (), {})])
+            self.assertEqual(
+                self.app.response.status, '200 OK')
             self.assertEqual(
                 self.app.response.headers,
-                [('Content-Length', '0')])
+                [('Content-Length', '300'),
+                 ('Content-Type', 'text/html;charset=utf-8')])
+            self.assertEqual(
+                get_event_names(),
+                ['PublicationStart',
+                 'PublicationAfterTraversal',
+                 'PublicationAfterRender',
+                 'PublicationBeforeCommit',
+                 'PublicationSuccess'])
+
+            body = consume_wsgi_result(result)
+
+            self.assertEqual(body, '')
+            self.assertEqual(
+                request.mocker_called(),  [('close', (), {})])
+            self.assertEqual(
+                self.app.transaction.mocker_called(), [])
+            self.assertEqual(
+                get_event_names(), [])
+
+            logs.assertEmpty()
+
+    def test_not_modified(self):
+        """Test a view that return nothing and set the HTTP status to
+        not modified. We should not see a Content-Length nor
+        Content-Type header.
+        """
+        request = self.new_request_for(not_modified_view)
+        with LoggingTesting('infrae.wsgi') as logs:
+            publication = WSGIPublication(self.app, request, self.response)
+            result = publication(lambda: cleanup(request))
+
+            self.assertEqual(
+                request.mocker_called(),
+                [('processInputs', (), {})])
+            self.assertEqual(
+                self.app.transaction.mocker_called(),
+                [('begin', (), {}),
+                 ('recordMetaData', (not_modified_view, request), {}),
+                 ('commit', (), {})])
+            self.assertEqual(
+                self.app.response.status, '304 Not Modified')
+            self.assertEqual(
+                self.app.response.headers, [])
             self.assertEqual(
                 get_event_names(),
                 ['PublicationStart',
@@ -656,7 +751,8 @@ class PublisherTestCase(unittest.TestCase):
                  ('recordMetaData', (invalid_view, request), {}),
                  ('commit', (), {})])
             self.assertEqual(
-                self.app.response.status, '200 OK')
+                self.app.response.status, '204 No Content')
+            self.assertNotIn('Content-Length', self.app.response.headers)
             self.assertEqual(
                self.app.response.headers,
                [])

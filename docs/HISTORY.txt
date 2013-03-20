@@ -4,8 +4,10 @@ Changes
 2.2 (unreleased)
 ----------------
 
-- fixed paster startup crash when multiple mount points are
-  in use beyond / and /temp_folder.
+- Fix HTTP status code 204 that was set even when a Content-Length was
+  defined.
+
+- Fixed paster startup crash when multiple mount points don't exists yet.
 
 2.1 (2012-12-10)
 ----------------

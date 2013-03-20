@@ -328,6 +328,7 @@ class WSGIPublication(object):
 
         # Render the content into the response
         self.app.transaction.recordMetaData(content, self.request)
+
         result = mapply(
             content, self.request.args, self.request,
             call_object, 1, missing_name, dont_publish_class,
