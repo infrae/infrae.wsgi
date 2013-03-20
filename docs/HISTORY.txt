@@ -4,6 +4,9 @@ Changes
 2.2 (unreleased)
 ----------------
 
+- Improve logging with raven: the message used to contain the
+  annotated traceback, that was too long.
+
 - Fix HTTP status code 204 that was set even when a Content-Length was
   defined.
 

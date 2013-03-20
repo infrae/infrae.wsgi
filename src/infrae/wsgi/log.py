@@ -99,7 +99,7 @@ class ErrorReporter(object):
         self.__ignore_errors = set(self.all_ignored_errors)
         self.__subscribed = list(subscribed) + [self._subscriber]
 
-    def _subscriber(self, request, response, obj, exc_info, exc_text, extra):
+    def _subscriber(self, request, response, obj, error_info, short_message, full_traceback, extra):
         log_entry = ['\n']
 
         if extra is not None:
@@ -120,7 +120,7 @@ class ErrorReporter(object):
         log_request_info('User-agent', 'HTTP_USER_AGENT')
         log_request_info('Refer', 'HTTP_REFERER')
 
-        log_entry.extend(exc_text)
+        log_entry.extend(full_traceback)
 
         # Save error.
         report = ''.join(log_entry)
@@ -165,16 +165,22 @@ class ErrorReporter(object):
     def log_last_error(self, request, response, obj=None, extra=None):
         """Build an error report and log the last available error.
         """
-        error_type, error_value, traceback = exc_info = sys.exc_info()
+        error_type, error_value, traceback = error_info = sys.exc_info()
         try:
             if ((not response.debug_mode) and
                 (not self.is_loggable(error_value))):
                 return
 
-            exc_text = format_exception(error_type, error_value, traceback)
+            try:
+                short_message = u'{0}: {1}'.format(
+                    error_type.__name__, error_value)
+            except:
+                short_message = error_type.__name__
 
+            full_message = format_exception(error_type, error_value, traceback)
             for plugin in self.__subscribed:
-                plugin(request, response, obj, exc_info, exc_text, extra)
+                plugin(request, response, obj, error_info,
+                       short_message, full_message, extra)
         finally:
             del traceback
 
