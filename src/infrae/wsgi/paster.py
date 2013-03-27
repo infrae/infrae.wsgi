@@ -110,7 +110,9 @@ def parse_raven_config(options):
     config = configuration_dict(options, 'raven', sep=".")
     for key in ['exclude_paths', 'include_paths', 'processors']:
         if key in config:
-            config[key] = configuration_list(config[key])
+            value = configuration_list(config[key])
+            if value:
+                config[key] = value
     if config:
         from .ravenplugin import RavenLoggingPlugin
         reporter.subscribe_to_errors(RavenLoggingPlugin(config))
@@ -145,7 +147,7 @@ def zope2_application_factory(global_conf, zope_conf, **options):
         debug_exceptions,
         zope_workers)
 
-# Utilities to read configuration options
+# Utilities to read configuration options from paster file
 
 def configuration_dict(options, key, sep="."):
     key_sep = key + sep
@@ -153,7 +155,9 @@ def configuration_dict(options, key, sep="."):
     for key, value in options.iteritems():
         if key.startswith(key_sep):
             prefix, result_key = key.split(sep, 1)
-            result[result_key] = value
+            value = value.strip()
+            if value:
+                result[result_key] = value
     return result
 
 def configuration_list(options, key, default=''):
