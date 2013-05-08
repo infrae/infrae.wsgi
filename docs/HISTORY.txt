@@ -12,6 +12,11 @@ Changes
 
 - Fixed paster startup crash when multiple mount points don't exists yet.
 
+- ``wsgi_intercept`` support is now optional for testing. There is a
+  simple test layer ``BrowserLayer`` that provides a test WSGI
+  application without the feature. The layers and browser with the
+  support have been prefixed with ``Zope``.
+
 2.1 (2012-12-10)
 ----------------
 

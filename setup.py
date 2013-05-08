@@ -9,8 +9,10 @@ version = '2.2dev'
 
 tests_require = [
     'infrae.testing',
-    'wsgi_intercept',
     'zope.site',
+    ]
+intercept_require = [
+    'wsgi_intercept',
     'zope.testbrowser',
     ]
 
@@ -57,6 +59,6 @@ setup(name='infrae.wsgi',
             'threads = infrae.wsgi.debugging:make_middleware',
             ],
         },
-      tests_require = tests_require,
-      extras_require = {'test': tests_require},
+      tests_require = tests_require + intercept_require,
+      extras_require = {'test': tests_require, 'intercept': intercept_require},
       )

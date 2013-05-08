@@ -5,12 +5,12 @@
 import unittest
 
 import infrae.wsgi
-from infrae.wsgi.testing import BrowserLayer, Browser
+from infrae.wsgi.testing import ZopeBrowserLayer, ZopeBrowser
 from infrae.testing import get_event_names
 from zope.security.management import queryInteraction
 
 
-class WSGILayer(BrowserLayer):
+class WSGILayer(ZopeBrowserLayer):
     default_users = {'admin': ['Manager']}
 
 
@@ -23,7 +23,7 @@ class FunctionalTestCase(unittest.TestCase):
     layer = FunctionalLayer
 
     def setUp(self):
-        self.browser = Browser()
+        self.browser = ZopeBrowser()
         self.browser.handleErrors = True
         self.browser.raiseHttpErrors = False
         get_event_names()       # Clear setup events

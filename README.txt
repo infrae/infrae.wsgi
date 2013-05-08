@@ -87,8 +87,8 @@ not a persistent setting and is forgotten on restart.
 Installation
 ============
 
-``infrae.wsgi`` has been and deployed with Paste Deploy and
-``mod_wsgi``. It correctly respect the WSGI specification and should
+``infrae.wsgi`` has been and deployed with Paste Deploy, ``mod_wsgi``
+and ``nginx``. It correctly respect the WSGI specification and should
 work with any WSGI server.
 
 Paste Deploy
@@ -149,10 +149,39 @@ hosting:
 Testing
 =======
 
-A layer inheriting of `infrae.testing`_ ``Zope2Layer`` layer called
-``BrowserLayer`` let you write functional tests.
+A test request ``TestRequest`` can be imported from
+``infrae.wsgi.testing``. It behaves *exactly* like a request used by
+Zope. It takes the following parameters when creating it:
 
-It provides both an ``http`` function and a ``Browser`` class (like
+``application``
+   WSGI application to use with the request.
+
+``layers``
+   Zope layers to apply on the request.
+
+``url``
+   URL used with the request.
+
+``method``
+   HTTP method used with the request.
+
+``headers``
+   HTTP headers that where sent with the request.
+
+``debug``
+   Should the request ran with the debug mode.
+
+``form``
+   Form data associated with the request.
+
+
+Functional Testing
+------------------
+
+A layer inheriting of `infrae.testing`_ ``Zope2Layer`` layer called
+``ZopeBrowserLayer`` let you write functional tests.
+
+It provides both an ``http`` function and a ``ZopeBrowser`` class (like
 the one provided by ``zope.testbrowser``) that you can use, and that
 will connect to the tested application using the WSGI support provided
 by this package.
@@ -167,7 +196,7 @@ You will be actually able to test applications that do use streaming::
 
    import unittest
 
-   from infrae.wsgi.testing import Browser, BrowserLayer
+   from infrae.wsgi.testing import ZopeBrowser, ZopeBrowserLayer
    import corp.testpackage
 
 
@@ -179,11 +208,15 @@ You will be actually able to test applications that do use streaming::
           # Create some test content
 
       def test_feature(self):
-          browser = Browser()
+          browser = ZopeBrowser()
           browser.open('http://localhost/somepage')
           self.assertEqual(browser.status, 200)
           ...
 
+This feature is provided by `wsgi_intercept`_. It is available only if
+`wsgi_intercept`_ is included in the environment.
 
+
+.. _wsgi_intercept: http://pypi.python.org/pypi/wsgi_intercept
 .. _infrae.testing: http://pypi.python.org/pypi/infrae.testing
 .. _Raven: http://raven.readthedocs.org/en/latest/

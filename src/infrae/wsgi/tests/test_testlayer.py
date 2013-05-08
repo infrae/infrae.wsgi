@@ -5,7 +5,7 @@
 import unittest
 
 import infrae.wsgi
-from infrae.wsgi.testing import BrowserLayer, Browser, http
+from infrae.wsgi.testing import ZopeBrowserLayer, ZopeBrowser, http
 
 
 class MockWSGIApplication(object):
@@ -23,11 +23,11 @@ class MockWSGIApplication(object):
 
     def __call__(self, environ, start_response):
         self.__environ = environ
-        write = start_response(self.__result_status, self.__result_headers)
+        start_response(self.__result_status, self.__result_headers)
         return ["Test succeed"]
 
 
-class BrowserTestLayer(BrowserLayer):
+class BrowserTestLayer(ZopeBrowserLayer):
     """A BrowserTestLayer where the Zope WSGI application is replaced
     with the mock WSGI application.
     """
@@ -58,7 +58,7 @@ class BrowserTestCase(unittest.TestCase):
     def test_open(self):
         """Just test to access a URL.
         """
-        browser = Browser()
+        browser = ZopeBrowser()
         browser.open('http://localhost/index.html')
         environ = self.wsgi_application.get_environ()
 
@@ -73,7 +73,7 @@ class BrowserTestCase(unittest.TestCase):
         """Test that the flag handleError on the browser switch the
         wsgi debug mode.
         """
-        browser = Browser()
+        browser = ZopeBrowser()
         browser.handleErrors = False
         browser.open('http://localhost/index.html')
         environ = self.wsgi_application.get_environ()
@@ -85,7 +85,7 @@ class BrowserTestCase(unittest.TestCase):
     def test_authenticate(self):
         """Test addHeader/authentication header.
         """
-        browser = Browser()
+        browser = ZopeBrowser()
         browser.addHeader('Authorization', 'Basic mgr:mgrpw')
         browser.open('http://localhost/index.html')
         environ = self.wsgi_application.get_environ()
@@ -96,7 +96,7 @@ class BrowserTestCase(unittest.TestCase):
         """Test addHeader/authentication header with an already
         encoded header.
         """
-        browser = Browser()
+        browser = ZopeBrowser()
         browser.addHeader('Authorization', 'Basic bWdyOm1ncnB3')
         browser.open('http://localhost/index.html')
         environ = self.wsgi_application.get_environ()
