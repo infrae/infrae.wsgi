@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) 2010-2012 Infrae. All rights reserved.
+# Copyright (c) 2010-2013 Infrae. All rights reserved.
 # See also LICENSE.txt
 
 # This package let you use zope.testbrowser with infrae.wsgi.
