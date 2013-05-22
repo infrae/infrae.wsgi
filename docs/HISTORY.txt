@@ -1,7 +1,7 @@
 Changes
 =======
 
-2.2 (unreleased)
+2.2 (2013-06-22)
 ----------------
 
 - Improve logging with raven: the message used to contain the
@@ -15,7 +15,8 @@ Changes
 - ``wsgi_intercept`` support is now optional for testing. There is a
   simple test layer ``BrowserLayer`` that provides a test WSGI
   application without the feature. The layers and browser with the
-  support have been prefixed with ``Zope``.
+  support have been prefixed with ``Zope``. In order to enable this
+  feature you must depend on the feature ``[intercept]``.
 
 2.1 (2012-12-10)
 ----------------
