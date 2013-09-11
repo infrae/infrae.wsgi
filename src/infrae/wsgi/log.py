@@ -35,6 +35,15 @@ def object_path(obj):
     return 'n/a'
 
 
+def make_unicode(text):
+    """Ensure the given text is in unicode.
+    """
+    if not isinstance(text, unicode):
+        if isinstance(text, str):
+            return text.decode('utf-8', 'replace')
+        return unicode(text)
+    return text
+
 def log_invalid_response_data(data, environ):
     """Log an invalid response type from application. Data sent must
     always be a string (unicode strings are accepted), if it is not an
@@ -123,7 +132,7 @@ class ErrorReporter(object):
         log_entry.extend(full_traceback)
 
         # Save error.
-        report = ''.join(log_entry)
+        report = u''.join(map(make_unicode, log_entry))
         logger.error(report)
         self.__last_errors.append(
             {'url': request['URL'], 'report': report, 'time': datetime.now()})
