@@ -1,10 +1,10 @@
 Changes
 =======
 
-2.3 (unreleased)
-----------------
+2.2.1 (2013-10-08)
+------------------
 
-- ...
+- Fix an UnicodeError in error message logging facilities.
 
 2.2 (2013-06-22)
 ----------------
