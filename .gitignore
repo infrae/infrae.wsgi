@@ -1,5 +1,5 @@
-.pyo
-.pyc
-.egg-info
-~
-#
+*.pyo
+*.pyc
+*.egg-info
+*~
+*#

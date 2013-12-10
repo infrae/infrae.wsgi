@@ -216,6 +216,12 @@ You will be actually able to test applications that do use streaming::
 This feature is provided by `wsgi_intercept`_. It is available only if
 `wsgi_intercept`_ is included in the environment.
 
+Code repository
+===============
+
+You can find the source code of this extensions in Git at
+https://github.com/infrae/infrae.wsgi.
+
 
 .. _wsgi_intercept: http://pypi.python.org/pypi/wsgi_intercept
 .. _infrae.testing: http://pypi.python.org/pypi/infrae.testing
